@@ -1,6 +1,6 @@
 {
-  "timestamp": "2026-07-21 12:37:56",
-  "run_folder": "screenshots/run_2026_07_21_12_37_56",
+  "timestamp": "2026-07-22 10:45:09",
+  "run_folder": "screenshots/run_2026_07_22_10_45_09",
   "login": {
     "status": "SUCCESS",
     "final_url": "http://localhost:3000/"
@@ -11,49 +11,49 @@
       "status": "SUCCESS",
       "url": "http://localhost:3000/",
       "heading": "Shalom, Ezekiel Kouassi ✨",
-      "screenshot": "screenshots/run_2026_07_21_12_37_56/04_dashboard.png"
+      "screenshot": "screenshots/run_2026_07_22_10_45_09/04_dashboard.png"
     },
     "/profile": {
       "title": "Profil & Mission",
       "status": "SUCCESS",
       "url": "http://localhost:3000/profile",
       "heading": "Mon Profil Spirituel",
-      "screenshot": "screenshots/run_2026_07_21_12_37_56/05_profile.png"
+      "screenshot": "screenshots/run_2026_07_22_10_45_09/05_profile.png"
     },
     "/members": {
       "title": "Repertoire des Membres",
       "status": "SUCCESS",
       "url": "http://localhost:3000/members",
-      "heading": "Fidèles & Suivi des Âmes0",
-      "screenshot": "screenshots/run_2026_07_21_12_37_56/06_members.png"
+      "heading": "Fidèles & Suivi des Âmes15",
+      "screenshot": "screenshots/run_2026_07_22_10_45_09/06_members.png"
     },
     "/attendance": {
       "title": "Appel & Fidelite Dominicale",
       "status": "SUCCESS",
       "url": "http://localhost:3000/attendance",
-      "heading": "Prise de Présence Interactive",
-      "screenshot": "screenshots/run_2026_07_21_12_37_56/07_attendance.png"
+      "heading": "Pointage des Présences",
+      "screenshot": "screenshots/run_2026_07_22_10_45_09/07_attendance.png"
     },
     "/activities": {
       "title": "Discipline Pastorale & Activites",
       "status": "SUCCESS",
       "url": "http://localhost:3000/activities",
-      "heading": "Suivi Hebdomadaire du Berger",
-      "screenshot": "screenshots/run_2026_07_21_12_37_56/08_activities.png"
+      "heading": "Suivi Spirituel du Berger",
+      "screenshot": "screenshots/run_2026_07_22_10_45_09/08_activities.png"
     },
     "/alerts": {
       "title": "Alertes & Urgences",
       "status": "SUCCESS",
       "url": "http://localhost:3000/alerts",
-      "heading": "Fidèles en Absence Prolongée (0)",
-      "screenshot": "screenshots/run_2026_07_21_12_37_56/09_alerts.png"
+      "heading": "Fidèles en Absence Prolongée3",
+      "screenshot": "screenshots/run_2026_07_22_10_45_09/09_alerts.png"
     },
     "/reports": {
       "title": "Consolidation & Rapports",
       "status": "SUCCESS",
       "url": "http://localhost:3000/reports",
       "heading": "Rapports Dominiceaux",
-      "screenshot": "screenshots/run_2026_07_21_12_37_56/10_reports.png"
+      "screenshot": "screenshots/run_2026_07_22_10_45_09/10_reports.png"
     }
   },
   "console_errors": [],

@@ -27,12 +27,28 @@ export default function LoginPage() {
       formData.append('password', password);
       formData.append('isSignUp', String(isSignUp));
 
-      const result = await loginAction(formData);
-      if (result?.error) {
-        setError(result.error);
-      } else if (result?.message) {
-        setMessage(result.message);
-      } else if (result?.success) {
+      if (isSignUp) {
+        const result = await loginAction(formData);
+        if (result?.error) {
+          setError(result.error);
+        } else if (result?.message) {
+          setMessage(result.message);
+        } else if (result?.success) {
+          window.location.href = '/';
+          return;
+        }
+      } else {
+        // Exécuter d'abord la connexion côté client pour écrire immédiatement les cookies Supabase dans le navigateur
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+        if (signInError) {
+          setError(signInError.message);
+          return;
+        }
+        // Double sécurité : synchronisation côté serveur
+        await loginAction(formData).catch(() => {});
         window.location.href = '/';
         return;
       }
@@ -48,78 +64,88 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-indigo-50/40 to-slate-100 p-4 relative overflow-hidden font-sans">
-      {/* Decorative warm light background blurs */}
-      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none animate-pulse" />
-      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl pointer-events-none animate-pulse delay-1000" />
+    <div className="min-h-screen flex items-center justify-center bg-[#FAF9F6] p-4 relative overflow-hidden font-sans">
+      {/* Divine Luxe Ambient Background Glows */}
+      <div className="absolute top-1/6 left-1/4 w-[500px] h-[500px] bg-gradient-to-tr from-indigo-500/15 via-purple-500/10 to-transparent rounded-full blur-3xl pointer-events-none animate-float" />
+      <div className="absolute bottom-1/6 right-1/4 w-[500px] h-[500px] bg-gradient-to-tr from-amber-500/15 via-amber-400/10 to-transparent rounded-full blur-3xl pointer-events-none animate-float" style={{ animationDelay: "2s" }} />
 
-      <div className="w-full max-w-md bg-white/95 backdrop-blur-2xl border border-slate-200/80 rounded-3xl shadow-2xl shadow-indigo-500/10 p-8 relative z-10">
+      <div className="w-full max-w-md bg-white/90 backdrop-blur-2xl border border-slate-200/80 rounded-[32px] shadow-[0_20px_60px_-15px_rgba(30,27,75,0.12)] p-8 sm:p-10 relative z-10 animate-fade-in-up">
+        {/* Logo & Header */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-3xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-amber-500 shadow-lg shadow-indigo-500/25 mb-4 transform hover:scale-105 transition-transform duration-300 font-black text-2xl text-white">
-            GÉ
+          <div className="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-gradient-to-tr from-[#1e1b4b] via-[#312e81] to-[#4338ca] shadow-xl shadow-indigo-950/25 mb-5 transform hover:scale-105 hover:rotate-3 transition-all duration-300 border border-[#fea619]/40 group">
+            <span className="material-symbols-outlined text-[#fea619] text-[40px] group-hover:scale-110 transition-transform" style={{ fontVariationSettings: "'FILL' 1" }}>
+              church
+            </span>
           </div>
-          <h1 className="text-2xl font-black text-slate-900 tracking-tight">
+          <h1 className="text-3xl font-headline-md font-extrabold text-[#1e1b4b] tracking-tight">
             Gestion Église
           </h1>
-          <p className="text-sm font-extrabold text-indigo-600 mt-1 tracking-wide">
+          <div className="inline-flex items-center gap-2 mt-2 px-3 py-1 rounded-full bg-amber-50 border border-amber-200/80 text-amber-900 text-xs font-bold tracking-wide">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#fea619] animate-pulse" />
             Puissance • Gloire • Sagesse
-          </p>
-          <p className="text-xs text-slate-500 mt-2 font-medium">
-            Plateforme spirituelle pour bergers, responsables et pasteur
+          </div>
+          <p className="text-xs text-slate-500 mt-3 font-medium leading-relaxed max-w-xs mx-auto">
+            Plateforme spirituelle d&apos;excellence pour bergers, responsables et pasteur.
           </p>
         </div>
 
         {error && (
-          <div className="mb-6 p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-sm flex items-start gap-3 shadow-2xs font-semibold">
-            <svg className="w-5 h-5 text-rose-500 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
+          <div className="mb-6 p-4 rounded-2xl bg-rose-50/90 border border-rose-200 text-rose-700 text-xs font-bold flex items-start gap-3 shadow-2xs animate-fade-in-up">
+            <span className="material-symbols-outlined text-rose-500 text-[20px] shrink-0">error</span>
             <span>{error}</span>
           </div>
         )}
 
         {message && (
-          <div className="mb-6 p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm flex items-start gap-3 shadow-2xs font-semibold">
-            <svg className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
+          <div className="mb-6 p-4 rounded-2xl bg-emerald-50/90 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-start gap-3 shadow-2xs animate-fade-in-up">
+            <span className="material-symbols-outlined text-emerald-600 text-[20px] shrink-0">check_circle</span>
             <span>{message}</span>
           </div>
         )}
 
         <form onSubmit={handleAuth} className="space-y-5">
           <div>
-            <label className="block text-xs font-black uppercase tracking-wider text-slate-600 mb-2">
+            <label className="block text-[11px] font-label-caps font-extrabold uppercase tracking-wider text-slate-600 mb-2">
               Adresse Email
             </label>
-            <input
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="berger@eglise.org"
-              className="w-full px-4 py-3 rounded-2xl bg-slate-50 border border-slate-200 text-slate-900 placeholder-slate-400 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-600 focus:bg-white transition-all duration-200 shadow-2xs"
-            />
+            <div className="relative">
+              <span className="material-symbols-outlined text-slate-400 text-[20px] absolute left-4 top-3.5 pointer-events-none">
+                mail
+              </span>
+              <input
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="ezekiel@eglise.org"
+                className="w-full pl-11 pr-4 py-3.5 rounded-2xl bg-slate-50/90 border border-slate-200 text-slate-900 placeholder-slate-400 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-[#1e1b4b]/20 focus:border-[#1e1b4b] focus:bg-white transition-all duration-200 shadow-2xs"
+              />
+            </div>
           </div>
 
           <div>
-            <label className="block text-xs font-black uppercase tracking-wider text-slate-600 mb-2">
+            <label className="block text-[11px] font-label-caps font-extrabold uppercase tracking-wider text-slate-600 mb-2">
               Mot de passe
             </label>
-            <input
-              type="password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              className="w-full px-4 py-3 rounded-2xl bg-slate-50 border border-slate-200 text-slate-900 placeholder-slate-400 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-600 focus:bg-white transition-all duration-200 shadow-2xs"
-            />
+            <div className="relative">
+              <span className="material-symbols-outlined text-slate-400 text-[20px] absolute left-4 top-3.5 pointer-events-none">
+                lock
+              </span>
+              <input
+                type="password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                className="w-full pl-11 pr-4 py-3.5 rounded-2xl bg-slate-50/90 border border-slate-200 text-slate-900 placeholder-slate-400 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-[#1e1b4b]/20 focus:border-[#1e1b4b] focus:bg-white transition-all duration-200 shadow-2xs"
+              />
+            </div>
           </div>
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3.5 px-4 rounded-2xl font-black text-sm text-white bg-gradient-to-r from-indigo-600 via-indigo-500 to-purple-600 hover:from-indigo-700 hover:to-purple-700 shadow-lg shadow-indigo-500/25 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 transform active:scale-[0.98]"
+            className="w-full py-4 px-4 rounded-2xl font-headline-md font-extrabold text-sm text-white bg-gradient-to-r from-[#1e1b4b] via-[#312e81] to-[#4338ca] hover:from-[#312e81] hover:to-[#4338ca] shadow-lg shadow-indigo-950/25 border border-[#fea619]/40 focus:outline-none focus:ring-2 focus:ring-[#1e1b4b] focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 transform active:scale-[0.98] cursor-pointer flex items-center justify-center gap-2.5"
           >
             {loading ? (
               <span className="flex items-center justify-center gap-2">
@@ -130,18 +156,24 @@ export default function LoginPage() {
                 Connexion en cours...
               </span>
             ) : isSignUp ? (
-              "S'inscrire à l'application"
+              <>
+                <span className="material-symbols-outlined text-[20px] text-[#fea619]">person_add</span>
+                S&apos;inscrire à l&apos;application
+              </>
             ) : (
-              "Se connecter"
+              <>
+                <span className="material-symbols-outlined text-[20px] text-[#fea619]">login</span>
+                Se connecter au Sanctuaire
+              </>
             )}
           </button>
         </form>
 
-        <div className="mt-6 text-center">
+        <div className="mt-6 pt-6 border-t border-slate-100 text-center">
           <button
             type="button"
             onClick={() => setIsSignUp(!isSignUp)}
-            className="text-xs font-bold text-slate-500 hover:text-indigo-600 transition-colors duration-200"
+            className="text-xs font-bold text-slate-500 hover:text-[#1e1b4b] transition-colors duration-200 cursor-pointer"
           >
             {isSignUp
               ? "Vous avez déjà un compte ? Connectez-vous ici"

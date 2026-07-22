@@ -327,60 +327,82 @@ export default function MembersPage() {
   const getStatusBadge = (status: Member["status"]) => {
     switch (status) {
       case "new":
-        return <span className="px-3 py-1 rounded-full text-xs font-black bg-indigo-50 text-indigo-700 border border-indigo-200 shadow-2xs">Nouveau</span>;
+        return (
+          <span className="px-3 py-1 rounded-full text-[11px] font-label-caps font-black bg-indigo-50 text-indigo-700 border border-indigo-200/80 shadow-2xs flex items-center gap-1.5 shrink-0">
+            <span className="w-1.5 h-1.5 rounded-full bg-indigo-600 animate-pulse" /> Nouveau
+          </span>
+        );
       case "in_integration":
-        return <span className="px-3 py-1 rounded-full text-xs font-black bg-purple-50 text-purple-700 border border-purple-200 shadow-2xs">En Intégration</span>;
+        return (
+          <span className="px-3 py-1 rounded-full text-[11px] font-label-caps font-black bg-purple-50 text-purple-700 border border-purple-200/80 shadow-2xs flex items-center gap-1.5 shrink-0">
+            <span className="w-1.5 h-1.5 rounded-full bg-purple-600 animate-pulse" /> En Intégration
+          </span>
+        );
       case "member":
-        return <span className="px-3 py-1 rounded-full text-xs font-black bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-2xs">Membre Intégré</span>;
+        return (
+          <span className="px-3 py-1 rounded-full text-[11px] font-label-caps font-black bg-emerald-50 text-emerald-700 border border-emerald-200/80 shadow-2xs flex items-center gap-1.5 shrink-0">
+            <span className="material-symbols-outlined text-[14px]">verified</span> Membre Intégré
+          </span>
+        );
       case "absent_to_relaunch":
-        return <span className="px-3 py-1 rounded-full text-xs font-black bg-rose-50 text-rose-700 border border-rose-200 shadow-2xs animate-pulse">Absent à relancer ⚠️</span>;
+        return (
+          <span className="px-3 py-1 rounded-full text-[11px] font-label-caps font-black bg-rose-50 text-rose-700 border border-rose-300 shadow-2xs animate-pulse flex items-center gap-1.5 shrink-0">
+            <span className="material-symbols-outlined text-[14px] text-rose-600">warning</span> Absent à relancer
+          </span>
+        );
       case "archived":
-        return <span className="px-3 py-1 rounded-full text-xs font-black bg-amber-50 text-amber-800 border border-amber-200 shadow-2xs">Archivé 📦</span>;
+        return (
+          <span className="px-3 py-1 rounded-full text-[11px] font-label-caps font-black bg-amber-50 text-amber-800 border border-amber-200/80 shadow-2xs flex items-center gap-1.5 shrink-0">
+            📦 Archivé
+          </span>
+        );
     }
   };
 
   const getClassBadge = (currentClass: Member["current_class"]) => {
     switch (currentClass) {
       case "none":
-        return <span className="px-2.5 py-1 rounded-xl text-xs font-bold bg-slate-100 text-slate-600 border border-slate-200">Aucune classe</span>;
+        return <span className="px-2.5 py-1 rounded-xl text-[11px] font-bold bg-slate-100 text-slate-600 border border-slate-200/80">Aucune classe</span>;
       case "tuesday_class":
-        return <span className="px-2.5 py-1 rounded-xl text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200">Classe du Mardi</span>;
+        return <span className="px-2.5 py-1 rounded-xl text-[11px] font-bold bg-blue-50 text-blue-700 border border-blue-200/80 flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-blue-500" /> Classe du Mardi</span>;
       case "wednesday_class":
-        return <span className="px-2.5 py-1 rounded-xl text-xs font-bold bg-purple-50 text-purple-700 border border-purple-200">Classe du Mercredi</span>;
+        return <span className="px-2.5 py-1 rounded-xl text-[11px] font-bold bg-purple-50 text-purple-700 border border-purple-200/80 flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-purple-500" /> Classe du Mercredi</span>;
       case "completed":
-        return <span className="px-2.5 py-1 rounded-xl text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">Classes Terminées ✓</span>;
+        return <span className="px-2.5 py-1 rounded-xl text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200/80 flex items-center gap-1"><span className="material-symbols-outlined text-[14px]">check_circle</span> Classes Terminées</span>;
     }
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center text-slate-600 font-sans">
-        <div className="flex items-center gap-3 bg-white px-6 py-4 rounded-2xl shadow-md border border-slate-200 font-semibold text-sm">
-          <svg className="animate-spin h-5 w-5 text-indigo-600" fill="none" viewBox="0 0 24 24">
+      <div className="min-h-screen bg-[#FAF9F6] flex items-center justify-center text-slate-600 font-sans">
+        <div className="glass-panel px-6 py-4 rounded-2xl shadow-xl flex items-center gap-3.5 font-label-caps font-bold text-sm">
+          <svg className="animate-spin h-5 w-5 text-[#1e1b4b]" fill="none" viewBox="0 0 24 24">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
           </svg>
-          <span>Chargement de la liste des fidèles...</span>
+          <span>Chargement de l&apos;annuaire du troupeau...</span>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-800 pb-20 font-sans">
+    <div className="min-h-screen bg-[#FAF9F6] text-slate-900 pb-28 font-sans">
       <Navbar
         role={profile?.role || "shepherd"}
         groupName={profile?.groups?.name}
         userName={profile ? `${profile.first_name} ${profile.last_name}` : undefined}
       />
 
-      <main className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
+      <main className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 space-y-7 animate-fade-in-up">
         {/* Header Section */}
-        <div className="glass-panel p-6 sm:p-8 rounded-3xl shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#1e1b4b] text-[#e3dfff] mb-2 border border-[#fea619]/30 shadow-2xs">
-              <span className="material-symbols-outlined text-[15px] text-[#fea619]">groups</span>
-              <span className="font-label-caps font-bold text-[11px] uppercase tracking-wider">Annuaire des Fidèles</span>
+        <div className="glass-panel p-6 sm:p-8 rounded-3xl shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-6 relative overflow-hidden">
+          <div className="absolute right-0 top-0 w-80 h-80 bg-gradient-to-bl from-indigo-500/10 via-purple-500/10 to-transparent rounded-full blur-3xl pointer-events-none" />
+          
+          <div className="relative z-10">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#1e1b4b] text-[#e3dfff] mb-3 border border-[#fea619]/40 shadow-xs">
+              <span className="material-symbols-outlined text-[16px] text-[#fea619]" style={{ fontVariationSettings: "'FILL' 1" }}>groups</span>
+              <span className="font-label-caps font-extrabold text-[11px] uppercase tracking-wider">Annuaire des Fidèles</span>
             </div>
             <h1 className="font-headline-md font-extrabold text-2xl sm:text-3xl text-[#1e1b4b] tracking-tight flex items-center gap-3">
               Fidèles & Suivi des Âmes
@@ -388,62 +410,62 @@ export default function MembersPage() {
                 {filteredMembers.length}
               </span>
             </h1>
-            <p className="text-[#47464f] text-xs sm:text-sm mt-1 font-medium">
-              Gérez vos fidèles, modifiez leurs informations et suivez leur statut spirituel de l&apos;intégration à la fidélité.
+            <p className="text-slate-600 text-xs sm:text-sm mt-1.5 font-medium max-w-2xl">
+              Gérez vos fidèles, actualisez leurs informations et suivez leur statut spirituel de l&apos;accueil au service spirituel.
             </p>
           </div>
 
           <button
             onClick={openCreateModal}
-            className="px-6 py-3.5 rounded-2xl font-black text-xs text-white bg-gradient-to-r from-[#1e1b4b] via-[#312e81] to-[#4338ca] hover:from-[#312e81] hover:to-[#4338ca] shadow-lg shadow-indigo-500/25 transition-all transform hover:scale-[1.02] active:scale-[0.98] shrink-0 flex items-center justify-center gap-2.5 cursor-pointer border border-[#fea619]/30"
+            className="px-6 py-4 rounded-2xl font-headline-md font-extrabold text-xs text-white bg-gradient-to-r from-[#1e1b4b] via-[#312e81] to-[#4338ca] hover:from-[#312e81] hover:to-[#4338ca] shadow-lg shadow-indigo-950/25 transition-all transform hover:scale-[1.02] active:scale-[0.98] shrink-0 flex items-center justify-center gap-2.5 cursor-pointer border border-[#fea619]/40 relative z-10"
           >
-            <span className="material-symbols-outlined text-[18px] text-[#fea619]">person_add</span>
+            <span className="material-symbols-outlined text-[20px] text-[#fea619]">person_add</span>
             Inscrire une nouvelle âme
           </button>
         </div>
 
         {/* Navigation Tabs */}
-        <div className="flex items-center gap-3 border-b border-slate-200 pb-2">
+        <div className="flex items-center gap-3 border-b border-slate-200/80 pb-3">
           <button
             onClick={() => setActiveTab("active")}
-            className={`px-5 py-2.5 rounded-2xl font-black text-xs transition-all flex items-center gap-2 cursor-pointer ${
+            className={`px-5 py-3 rounded-2xl font-label-caps font-extrabold text-xs transition-all flex items-center gap-2.5 cursor-pointer ${
               activeTab === "active"
-                ? "bg-indigo-600 text-white shadow-md shadow-indigo-500/20"
-                : "bg-white text-slate-600 hover:bg-slate-100 border border-slate-200"
+                ? "bg-gradient-to-r from-[#1e1b4b] to-[#312e81] text-white shadow-md shadow-indigo-950/20 border border-[#fea619]/30 scale-[1.02]"
+                : "bg-white text-slate-600 hover:bg-slate-100/80 border border-slate-200/80 hover:text-slate-900"
             }`}
           >
-            Membres Actifs
-            <span className={`px-2 py-0.5 rounded-full text-[10px] ${activeTab === "active" ? "bg-indigo-500 text-white" : "bg-slate-100 text-slate-700"}`}>
+            <span>Membres Actifs</span>
+            <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${activeTab === "active" ? "bg-[#fea619] text-slate-900" : "bg-slate-100 text-slate-700"}`}>
               {activeMembers.length}
             </span>
           </button>
           <button
             onClick={() => setActiveTab("archived")}
-            className={`px-5 py-2.5 rounded-2xl font-black text-xs transition-all flex items-center gap-2 cursor-pointer ${
+            className={`px-5 py-3 rounded-2xl font-label-caps font-extrabold text-xs transition-all flex items-center gap-2.5 cursor-pointer ${
               activeTab === "archived"
-                ? "bg-amber-600 text-white shadow-md shadow-amber-500/20"
-                : "bg-white text-slate-600 hover:bg-slate-100 border border-slate-200"
+                ? "bg-gradient-to-r from-amber-600 to-amber-700 text-white shadow-md shadow-amber-600/20 border border-amber-400/40 scale-[1.02]"
+                : "bg-white text-slate-600 hover:bg-slate-100/80 border border-slate-200/80 hover:text-slate-900"
             }`}
           >
-            Archives & Purgatoire
-            <span className={`px-2 py-0.5 rounded-full text-[10px] ${activeTab === "archived" ? "bg-amber-500 text-white" : "bg-amber-100 text-amber-800"}`}>
+            <span>Archives & Purgatoire</span>
+            <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${activeTab === "archived" ? "bg-white text-amber-800" : "bg-amber-100 text-amber-800"}`}>
               {archivedMembersList.length}
             </span>
           </button>
         </div>
 
         {/* Filters Bar */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-white border border-slate-200/80 p-5 rounded-3xl shadow-lg shadow-slate-200/40">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 glass-panel p-5 rounded-3xl shadow-sm">
           <div className="relative">
-            <svg className="w-4 h-4 absolute left-4 top-3.5 text-slate-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
+            <span className="material-symbols-outlined text-slate-400 text-[20px] absolute left-4 top-3 pointer-events-none">
+              search
+            </span>
             <input
               type="text"
               placeholder="Rechercher par nom ou téléphone..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-11 pr-4 py-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-600 focus:bg-white transition-all shadow-2xs"
+              className="w-full pl-11 pr-4 py-3 rounded-2xl bg-slate-50/90 border border-slate-200/80 text-xs font-semibold text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#1e1b4b]/20 focus:border-[#1e1b4b] focus:bg-white transition-all shadow-2xs"
             />
           </div>
 
@@ -453,7 +475,7 @@ export default function MembersPage() {
                 <select
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-600 focus:bg-white transition-all shadow-2xs cursor-pointer"
+                  className="w-full px-4 py-3 rounded-2xl bg-slate-50/90 border border-slate-200/80 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#1e1b4b]/20 focus:border-[#1e1b4b] focus:bg-white transition-all shadow-2xs cursor-pointer"
                 >
                   <option value="all">Tous les statuts spirituels</option>
                   <option value="new">Nouveaux (Dimanche 1)</option>
@@ -467,7 +489,7 @@ export default function MembersPage() {
                 <select
                   value={classFilter}
                   onChange={(e) => setClassFilter(e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-600 focus:bg-white transition-all shadow-2xs cursor-pointer"
+                  className="w-full px-4 py-3 rounded-2xl bg-slate-50/90 border border-slate-200/80 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#1e1b4b]/20 focus:border-[#1e1b4b] focus:bg-white transition-all shadow-2xs cursor-pointer"
                 >
                   <option value="all">Toutes les classes d&apos;enseignement</option>
                   <option value="tuesday_class">Classe du Mardi</option>
@@ -478,44 +500,43 @@ export default function MembersPage() {
               </div>
             </>
           ) : (
-            <div className="md:col-span-2 flex items-center px-4 text-xs font-medium text-amber-800 bg-amber-50/80 rounded-2xl border border-amber-200">
-              ℹ️ Les fidèles dans cette section seront définitivement supprimés après un délai de 90 jours s&apos;ils ne sont pas réintégrés.
+            <div className="md:col-span-2 flex items-center px-4 py-3 text-xs font-bold text-amber-900 bg-amber-50/90 rounded-2xl border border-amber-200/80 shadow-2xs">
+              <span className="material-symbols-outlined text-[18px] text-amber-600 mr-2 shrink-0">info</span>
+              <span>Les fidèles dans cette section seront définitivement supprimés après un délai de 90 jours s&apos;ils ne sont pas réintégrés au troupeau.</span>
             </div>
           )}
         </div>
 
         {/* Member Grid / Cards */}
         {filteredMembers.length === 0 ? (
-          <div className="bg-white border border-slate-200/80 rounded-3xl p-12 text-center shadow-lg shadow-slate-200/40">
-            <div className="w-16 h-16 rounded-3xl bg-indigo-50 border border-indigo-100 flex items-center justify-center mx-auto text-indigo-600 mb-4 shadow-sm">
-              <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-              </svg>
+          <div className="glass-panel rounded-3xl p-14 text-center shadow-sm">
+            <div className="w-16 h-16 rounded-3xl bg-indigo-50 border border-indigo-100 flex items-center justify-center mx-auto text-[#1e1b4b] mb-4 shadow-sm">
+              <span className="material-symbols-outlined text-[32px]">person_off</span>
             </div>
-            <h3 className="text-base font-black text-slate-900">Aucun fidèle ne correspond à vos filtres</h3>
-            <p className="text-xs font-medium text-slate-500 mt-1">Essayez de modifier votre recherche ou inscrivez un nouveau fidèle.</p>
+            <h3 className="text-base font-headline-md font-extrabold text-slate-900">Aucun fidèle ne correspond à vos critères</h3>
+            <p className="text-xs font-medium text-slate-500 mt-1.5 max-w-sm mx-auto">Essayez d&apos;élargir votre recherche ou de modifier vos filtres d&apos;affichage.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
             {paginatedMembers.map((member) => (
               <div
                 key={member.id}
-                className={`bg-white border ${
-                  activeTab === "archived" ? "border-amber-200/80 hover:border-amber-400" : "border-slate-200/80 hover:border-indigo-200"
-                } rounded-2xl p-4 sm:p-5 transition-all flex flex-col justify-between shadow-lg shadow-slate-200/40 hover:shadow-xl`}
+                className={`card-luxe p-5 transition-all flex flex-col justify-between ${
+                  activeTab === "archived" ? "border-amber-200/80 bg-amber-50/20" : ""
+                }`}
               >
                 <div>
-                  <div className="flex items-start justify-between gap-3 mb-3">
+                  <div className="flex items-start justify-between gap-3 mb-3.5">
                     <div className="min-w-0 flex-1">
-                      <h3 className="text-sm sm:text-base font-black text-slate-900 truncate" title={`${member.first_name} ${member.last_name}`}>
+                      <h3 className="text-sm sm:text-base font-headline-md font-extrabold text-slate-900 truncate" title={`${member.first_name} ${member.last_name}`}>
                         {member.first_name} {member.last_name}
                       </h3>
                       {member.phone ? (
-                        <a href={`tel:${member.phone}`} className="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 mt-0.5 inline-block truncate block">
-                          📞 {member.phone}
+                        <a href={`tel:${member.phone}`} className="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 mt-1 flex items-center gap-1 truncate">
+                          <span className="material-symbols-outlined text-[14px]">call</span> {member.phone}
                         </a>
                       ) : (
-                        <span className="text-[11px] font-medium text-slate-400 mt-0.5 block truncate">Aucun téléphone</span>
+                        <span className="text-[11px] font-medium text-slate-400 mt-1 block truncate">Aucun téléphone</span>
                       )}
                     </div>
                     <div className="shrink-0">
@@ -524,7 +545,7 @@ export default function MembersPage() {
                   </div>
 
                   {activeTab === "archived" ? (
-                    <div className="space-y-2.5 my-3 py-3 border-y border-amber-100 text-[11px]">
+                    <div className="space-y-2.5 my-3.5 py-3 border-y border-amber-100/80 text-[11px]">
                       <div className="flex items-center justify-between gap-2">
                         <span className="text-amber-900 font-semibold truncate">Archivé depuis :</span>
                         <span className="font-bold text-slate-700 whitespace-nowrap shrink-0">
@@ -539,17 +560,17 @@ export default function MembersPage() {
                       </div>
                     </div>
                   ) : (
-                    <div className="space-y-2.5 my-3 py-3 border-y border-slate-100 text-[11px] font-medium">
+                    <div className="space-y-2.5 my-3.5 py-3.5 border-y border-slate-100 text-[11px] font-medium">
                       <div className="flex items-center justify-between gap-2">
                         <span className="text-slate-500 font-semibold truncate">Dimanches présents :</span>
-                        <span className="font-black text-indigo-700 bg-indigo-50 px-2.5 py-0.5 rounded-lg border border-indigo-200/80 shadow-2xs whitespace-nowrap shrink-0">
+                        <span className="font-extrabold text-[#1e1b4b] bg-indigo-50/80 px-2.5 py-0.5 rounded-lg border border-indigo-200/60 shadow-2xs whitespace-nowrap shrink-0 font-stat-mono text-xs">
                           {member.consecutive_sundays_present} / 4 Dim.
                         </span>
                       </div>
 
                       <div className="flex items-center justify-between gap-2">
                         <span className="text-slate-500 font-semibold truncate">Absences d&apos;affilée :</span>
-                        <span className={`font-black whitespace-nowrap shrink-0 ${member.consecutive_absences >= 2 ? "text-rose-700 bg-rose-50 px-2.5 py-0.5 rounded-lg border border-rose-200 shadow-2xs" : "text-slate-700"}`}>
+                        <span className={`font-extrabold whitespace-nowrap shrink-0 font-stat-mono text-xs ${member.consecutive_absences >= 2 ? "text-rose-700 bg-rose-50 px-2.5 py-0.5 rounded-lg border border-rose-200/80 shadow-2xs animate-pulse" : "text-slate-700"}`}>
                           {member.consecutive_absences} sem.
                         </span>
                       </div>
@@ -569,23 +590,23 @@ export default function MembersPage() {
                   <div className="pt-3 flex items-center justify-between gap-2 border-t border-amber-100/60">
                     <button
                       onClick={() => handleReintegrateMember(member.id)}
-                      className="flex-1 px-3 py-2 rounded-xl text-[11px] font-black bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-500/20 transition-all flex items-center justify-center gap-1 cursor-pointer whitespace-nowrap"
+                      className="flex-1 px-3 py-2.5 rounded-xl text-xs font-black bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-500/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap"
                     >
-                      🔄 Réintégrer
+                      <span className="material-symbols-outlined text-[16px]">restore_from_trash</span> Réintégrer
                     </button>
                     <button
                       onClick={() => handlePermanentDelete(member.id)}
-                      className="flex-1 px-3 py-2 rounded-xl text-[11px] font-bold bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 transition-colors flex items-center justify-center gap-1 cursor-pointer whitespace-nowrap"
+                      className="flex-1 px-3 py-2.5 rounded-xl text-xs font-bold bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 transition-colors flex items-center justify-center gap-1 cursor-pointer whitespace-nowrap"
                       title="Supprimer définitivement tout de suite"
                     >
-                      🗑️ Supprimer
+                      <span className="material-symbols-outlined text-[16px]">delete_forever</span> Supprimer
                     </button>
                   </div>
                 ) : (
-                  <div className="pt-2 space-y-2.5">
+                  <div className="pt-2 space-y-3">
                     <div>
                       <div className="flex items-center justify-between mb-1.5">
-                        <span className="text-[10px] sm:text-[11px] font-black text-slate-500 uppercase tracking-wider truncate">Classe actuelle :</span>
+                        <span className="text-[10px] font-label-caps font-extrabold text-slate-500 uppercase tracking-wider truncate">Classe spirituelle :</span>
                         {editingClassId === member.id ? (
                           <button
                             onClick={() => setEditingClassId(null)}
@@ -598,13 +619,13 @@ export default function MembersPage() {
                             onClick={() => setEditingClassId(member.id)}
                             className="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 underline flex items-center gap-1 cursor-pointer shrink-0 ml-2 whitespace-nowrap"
                           >
-                            Changer de classe ✎
+                            Changer ✎
                           </button>
                         )}
                       </div>
 
                       {editingClassId === member.id ? (
-                        <div className="grid grid-cols-2 gap-1.5 mt-1.5 bg-slate-50 p-2 rounded-xl border border-slate-200 shadow-sm">
+                        <div className="grid grid-cols-2 gap-1.5 mt-2 bg-slate-50 p-2 rounded-xl border border-slate-200/80 shadow-sm">
                           <button
                             onClick={() => handleUpdateClass(member.id, "tuesday_class")}
                             className="px-2 py-1.5 rounded-lg text-xs font-bold bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 transition-colors cursor-pointer truncate"
@@ -631,7 +652,7 @@ export default function MembersPage() {
                           </button>
                         </div>
                       ) : (
-                        <div className="flex items-center justify-between gap-2 bg-slate-50 px-3 py-2 rounded-xl border border-slate-200/80">
+                        <div className="flex items-center justify-between gap-2 bg-slate-50/80 px-3 py-2 rounded-xl border border-slate-200/80">
                           <div className="min-w-0 flex-1 truncate">
                             {getClassBadge(member.current_class)}
                           </div>
@@ -639,22 +660,22 @@ export default function MembersPage() {
                             <button
                               onClick={() => handleUpdateClass(member.id, "completed")}
                               title="Promouvoir comme classe terminée"
-                              className="text-[11px] font-black text-emerald-700 hover:bg-emerald-50 px-2.5 py-1 rounded-xl border border-transparent hover:border-emerald-200 transition-all shadow-2xs cursor-pointer whitespace-nowrap shrink-0"
+                              className="text-[11px] font-black text-emerald-700 hover:bg-emerald-100/80 px-2.5 py-1 rounded-xl border border-transparent hover:border-emerald-300 transition-all shadow-2xs cursor-pointer whitespace-nowrap shrink-0 flex items-center gap-1"
                             >
-                              Diplômer ✓
+                              <span className="material-symbols-outlined text-[14px]">school</span> Diplômer ✓
                             </button>
                           )}
                         </div>
                       )}
                     </div>
 
-                    <div className="pt-2 border-t border-slate-100/80 flex items-center justify-between gap-2">
+                    <div className="pt-2.5 border-t border-slate-100/80 flex items-center justify-between gap-2">
                       <button
                         onClick={() => openEditModal(member)}
-                        className="flex-1 py-1.5 px-3 rounded-xl text-xs font-bold bg-slate-100 hover:bg-indigo-50 text-slate-700 hover:text-indigo-600 border border-slate-200 hover:border-indigo-200 transition-all flex items-center justify-center gap-1 cursor-pointer whitespace-nowrap shadow-2xs"
+                        className="flex-1 py-2 px-3 rounded-xl text-xs font-bold bg-slate-100/80 hover:bg-indigo-50 text-slate-700 hover:text-[#1e1b4b] border border-slate-200/80 hover:border-indigo-200 transition-all flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap shadow-2xs"
                         title="Modifier les informations ou le statut"
                       >
-                        ✎ Modifier
+                        <span className="material-symbols-outlined text-[15px]">edit</span> Modifier
                       </button>
                       <button
                         onClick={() => {
@@ -662,10 +683,10 @@ export default function MembersPage() {
                             handleArchiveMember(member.id);
                           }
                         }}
-                        className="flex-1 py-1.5 px-3 rounded-xl text-xs font-bold bg-amber-50 hover:bg-amber-100 text-amber-700 hover:text-amber-900 border border-amber-200 hover:border-amber-300 transition-all flex items-center justify-center gap-1 cursor-pointer whitespace-nowrap shadow-2xs"
+                        className="flex-1 py-2 px-3 rounded-xl text-xs font-bold bg-amber-50/80 hover:bg-amber-100 text-amber-800 hover:text-amber-900 border border-amber-200 hover:border-amber-300 transition-all flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap shadow-2xs"
                         title="Archiver ce fidèle (Purgatoire 90 jours)"
                       >
-                        📦 Archiver
+                        <span className="material-symbols-outlined text-[15px]">archive</span> Archiver
                       </button>
                     </div>
                   </div>
@@ -679,7 +700,7 @@ export default function MembersPage() {
         {filteredMembers.length > 0 && (
           <div
             data-testid="pagination-controls"
-            className="mt-8 bg-white border border-slate-200/80 rounded-3xl p-5 shadow-lg shadow-slate-200/40 flex flex-col sm:flex-row items-center justify-between gap-4"
+            className="glass-panel rounded-3xl p-5 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4"
           >
             <div className="flex items-center gap-3">
               <span className="text-xs font-bold text-slate-600">
@@ -750,34 +771,42 @@ export default function MembersPage() {
 
         {/* Unified Modal (Create & Edit) */}
         {modalMode !== null && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
-            <div className="bg-white border border-slate-200/80 rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl relative max-h-[90vh] overflow-y-auto">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#1e1b4b]/60 backdrop-blur-md animate-fade-in">
+            <div className="glass-panel border border-white/80 rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl relative max-h-[90vh] overflow-y-auto animate-fade-in-up">
               <button
                 onClick={() => setModalMode(null)}
-                className="absolute top-6 right-6 text-slate-400 hover:text-slate-700 font-bold text-lg cursor-pointer"
+                className="absolute top-6 right-6 w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 flex items-center justify-center transition-colors cursor-pointer"
               >
-                ✕
+                <span className="material-symbols-outlined text-[18px]">close</span>
               </button>
 
-              <h2 className="text-xl font-black text-slate-900 mb-1">
-                {modalMode === "create" ? "Inscrire une nouvelle âme" : "Modifier les informations & statut"}
-              </h2>
+              <div className="flex items-center gap-2.5 mb-2">
+                <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-[#1e1b4b] to-[#4338ca] text-[#fea619] flex items-center justify-center shadow-md">
+                  <span className="material-symbols-outlined text-[18px]">
+                    {modalMode === "create" ? "person_add" : "manage_accounts"}
+                  </span>
+                </div>
+                <h2 className="text-xl font-headline-md font-extrabold text-[#1e1b4b]">
+                  {modalMode === "create" ? "Inscrire une nouvelle âme" : "Modifier les informations & statut"}
+                </h2>
+              </div>
               <p className="text-xs font-medium text-slate-500 mb-6">
                 {modalMode === "create"
-                  ? "Définissez les informations de base et indiquez le statut spirituel initial du fidèle."
-                  : "Mettez à jour les coordonnées, le berger responsable ou ajustez le statut spirituel."}
+                  ? "Définissez les coordonnées de base et indiquez le statut spirituel initial du fidèle dans le troupeau."
+                  : "Mettez à jour les coordonnées, le berger responsable ou ajustez le statut spirituel du fidèle."}
               </p>
 
               <form onSubmit={handleSaveMember} className="space-y-5">
                 {/* Section Informations personnelles */}
                 <div className="space-y-4">
-                  <h3 className="text-xs font-black text-indigo-600 uppercase tracking-wider border-b border-indigo-100 pb-1.5">
+                  <h3 className="text-xs font-label-caps font-extrabold text-[#1e1b4b] uppercase tracking-wider border-b border-indigo-100/80 pb-2 flex items-center gap-1.5">
+                    <span className="material-symbols-outlined text-[15px] text-[#fea619]">badge</span>
                     1. Coordonnées & Assignation
                   </h3>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs font-black uppercase tracking-wider text-slate-600 mb-1.5">
+                      <label className="block text-xs font-label-caps font-extrabold uppercase tracking-wider text-slate-600 mb-1.5">
                         Prénom
                       </label>
                       <input
@@ -786,11 +815,11 @@ export default function MembersPage() {
                         placeholder="Jean"
                         value={currentMember.first_name}
                         onChange={(e) => setCurrentMember({ ...currentMember, first_name: e.target.value })}
-                        className="w-full px-4 py-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-600 focus:bg-white transition-all shadow-2xs"
+                        className="w-full px-4 py-3 rounded-2xl bg-slate-50/90 border border-slate-200/80 text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#1e1b4b]/20 focus:border-[#1e1b4b] focus:bg-white transition-all shadow-2xs"
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-black uppercase tracking-wider text-slate-600 mb-1.5">
+                      <label className="block text-xs font-label-caps font-extrabold uppercase tracking-wider text-slate-600 mb-1.5">
                         Nom
                       </label>
                       <input
@@ -799,13 +828,13 @@ export default function MembersPage() {
                         placeholder="Dupont"
                         value={currentMember.last_name}
                         onChange={(e) => setCurrentMember({ ...currentMember, last_name: e.target.value })}
-                        className="w-full px-4 py-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-600 focus:bg-white transition-all shadow-2xs"
+                        className="w-full px-4 py-3 rounded-2xl bg-slate-50/90 border border-slate-200/80 text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#1e1b4b]/20 focus:border-[#1e1b4b] focus:bg-white transition-all shadow-2xs"
                       />
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-black uppercase tracking-wider text-slate-600 mb-1.5">
+                    <label className="block text-xs font-label-caps font-extrabold uppercase tracking-wider text-slate-600 mb-1.5">
                       Téléphone / WhatsApp
                     </label>
                     <input
@@ -813,18 +842,18 @@ export default function MembersPage() {
                       placeholder="+33 6 00 00 00 00"
                       value={currentMember.phone}
                       onChange={(e) => setCurrentMember({ ...currentMember, phone: e.target.value })}
-                      className="w-full px-4 py-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-600 focus:bg-white transition-all shadow-2xs"
+                      className="w-full px-4 py-3 rounded-2xl bg-slate-50/90 border border-slate-200/80 text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#1e1b4b]/20 focus:border-[#1e1b4b] focus:bg-white transition-all shadow-2xs"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-black uppercase tracking-wider text-slate-600 mb-1.5">
+                    <label className="block text-xs font-label-caps font-extrabold uppercase tracking-wider text-slate-600 mb-1.5">
                       Berger Responsable
                     </label>
                     <select
                       value={currentMember.shepherd_id}
                       onChange={(e) => setCurrentMember({ ...currentMember, shepherd_id: e.target.value })}
-                      className="w-full px-4 py-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-600 focus:bg-white transition-all shadow-2xs cursor-pointer"
+                      className="w-full px-4 py-3 rounded-2xl bg-slate-50/90 border border-slate-200/80 text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#1e1b4b]/20 focus:border-[#1e1b4b] focus:bg-white transition-all shadow-2xs cursor-pointer"
                     >
                       <option value="">Sélectionner un berger...</option>
                       {shepherds.map((s) => (
@@ -836,13 +865,13 @@ export default function MembersPage() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-black uppercase tracking-wider text-slate-600 mb-1.5">
-                      Invité(e) par (Optionnel)
+                    <label className="block text-xs font-label-caps font-extrabold uppercase tracking-wider text-slate-600 mb-1.5">
+                      Invité(e) par (Parrain / Marraine)
                     </label>
                     <select
                       value={currentMember.invited_by_member_id}
                       onChange={(e) => setCurrentMember({ ...currentMember, invited_by_member_id: e.target.value })}
-                      className="w-full px-4 py-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-600 focus:bg-white transition-all shadow-2xs cursor-pointer"
+                      className="w-full px-4 py-3 rounded-2xl bg-slate-50/90 border border-slate-200/80 text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#1e1b4b]/20 focus:border-[#1e1b4b] focus:bg-white transition-all shadow-2xs cursor-pointer"
                     >
                       <option value="">Aucun parrain / marraine</option>
                       {allMembers.map((m) => (
@@ -854,13 +883,13 @@ export default function MembersPage() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-black uppercase tracking-wider text-slate-600 mb-1.5">
-                      Classe d&apos;enseignement
+                    <label className="block text-xs font-label-caps font-extrabold uppercase tracking-wider text-slate-600 mb-1.5">
+                      Classe d&apos;enseignement spirituel
                     </label>
                     <select
                       value={currentMember.current_class}
                       onChange={(e) => setCurrentMember({ ...currentMember, current_class: e.target.value as Member["current_class"] })}
-                      className="w-full px-4 py-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-600 focus:bg-white transition-all shadow-2xs cursor-pointer"
+                      className="w-full px-4 py-3 rounded-2xl bg-slate-50/90 border border-slate-200/80 text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#1e1b4b]/20 focus:border-[#1e1b4b] focus:bg-white transition-all shadow-2xs cursor-pointer"
                     >
                       <option value="none">Aucune classe pour l&apos;instant</option>
                       <option value="tuesday_class">Classe du Mardi</option>
@@ -872,8 +901,9 @@ export default function MembersPage() {
 
                 {/* Section Statut spirituel */}
                 <div className="space-y-3 pt-2">
-                  <h3 className="text-xs font-black text-indigo-600 uppercase tracking-wider border-b border-indigo-100 pb-1.5">
-                    2. Statut Spirituel & Intégration
+                  <h3 className="text-xs font-label-caps font-extrabold text-[#1e1b4b] uppercase tracking-wider border-b border-indigo-100/80 pb-2 flex items-center gap-1.5">
+                    <span className="material-symbols-outlined text-[15px] text-[#fea619]">church</span>
+                    2. Statut Spirituel & Cycle d&apos;Intégration
                   </h3>
 
                   <div className="grid grid-cols-1 gap-2.5">
@@ -881,8 +911,8 @@ export default function MembersPage() {
                       onClick={() => setCurrentMember({ ...currentMember, status: "new" })}
                       className={`flex items-start gap-3 p-3.5 rounded-2xl border cursor-pointer transition-all ${
                         currentMember.status === "new"
-                          ? "bg-indigo-50/80 border-indigo-300 ring-2 ring-indigo-500/20 shadow-sm"
-                          : "bg-slate-50/50 border-slate-200 hover:bg-slate-50"
+                          ? "bg-indigo-50/90 border-indigo-300 ring-2 ring-indigo-500/20 shadow-sm"
+                          : "bg-slate-50/60 border-slate-200/80 hover:bg-slate-50"
                       }`}
                     >
                       <input
@@ -890,10 +920,10 @@ export default function MembersPage() {
                         name="member_status"
                         checked={currentMember.status === "new"}
                         onChange={() => setCurrentMember({ ...currentMember, status: "new" })}
-                        className="mt-0.5 text-indigo-600 focus:ring-indigo-500"
+                        className="mt-0.5 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
                       />
                       <div>
-                        <div className="text-xs font-black text-slate-900 flex items-center gap-2">
+                        <div className="text-xs font-extrabold text-slate-900 flex items-center gap-2">
                           🌟 Nouveau (Dimanche 1)
                         </div>
                         <p className="text-[11px] text-slate-500 font-medium mt-0.5">
@@ -906,8 +936,8 @@ export default function MembersPage() {
                       onClick={() => setCurrentMember({ ...currentMember, status: "in_integration" })}
                       className={`flex items-start gap-3 p-3.5 rounded-2xl border cursor-pointer transition-all ${
                         currentMember.status === "in_integration"
-                          ? "bg-purple-50/80 border-purple-300 ring-2 ring-purple-500/20 shadow-sm"
-                          : "bg-slate-50/50 border-slate-200 hover:bg-slate-50"
+                          ? "bg-purple-50/90 border-purple-300 ring-2 ring-purple-500/20 shadow-sm"
+                          : "bg-slate-50/60 border-slate-200/80 hover:bg-slate-50"
                       }`}
                     >
                       <input
@@ -915,10 +945,10 @@ export default function MembersPage() {
                         name="member_status"
                         checked={currentMember.status === "in_integration"}
                         onChange={() => setCurrentMember({ ...currentMember, status: "in_integration" })}
-                        className="mt-0.5 text-purple-600 focus:ring-purple-500"
+                        className="mt-0.5 text-purple-600 focus:ring-purple-500 cursor-pointer"
                       />
                       <div>
-                        <div className="text-xs font-black text-slate-900 flex items-center gap-2">
+                        <div className="text-xs font-extrabold text-slate-900 flex items-center gap-2">
                           🔄 En Intégration (Dimanches 2 à 4)
                         </div>
                         <p className="text-[11px] text-slate-500 font-medium mt-0.5">
@@ -931,8 +961,8 @@ export default function MembersPage() {
                       onClick={() => setCurrentMember({ ...currentMember, status: "member" })}
                       className={`flex items-start gap-3 p-3.5 rounded-2xl border cursor-pointer transition-all ${
                         currentMember.status === "member"
-                          ? "bg-emerald-50/80 border-emerald-300 ring-2 ring-emerald-500/20 shadow-sm"
-                          : "bg-slate-50/50 border-slate-200 hover:bg-slate-50"
+                          ? "bg-emerald-50/90 border-emerald-300 ring-2 ring-emerald-500/20 shadow-sm"
+                          : "bg-slate-50/60 border-slate-200/80 hover:bg-slate-50"
                       }`}
                     >
                       <input
@@ -940,10 +970,10 @@ export default function MembersPage() {
                         name="member_status"
                         checked={currentMember.status === "member"}
                         onChange={() => setCurrentMember({ ...currentMember, status: "member" })}
-                        className="mt-0.5 text-emerald-600 focus:ring-emerald-500"
+                        className="mt-0.5 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
                       />
                       <div>
-                        <div className="text-xs font-black text-slate-900 flex items-center gap-2">
+                        <div className="text-xs font-extrabold text-slate-900 flex items-center gap-2">
                           ✨ Membre Intégré
                         </div>
                         <p className="text-[11px] text-slate-500 font-medium mt-0.5">
@@ -957,8 +987,8 @@ export default function MembersPage() {
                         onClick={() => setCurrentMember({ ...currentMember, status: "absent_to_relaunch" })}
                         className={`flex items-start gap-3 p-3.5 rounded-2xl border cursor-pointer transition-all ${
                           currentMember.status === "absent_to_relaunch"
-                            ? "bg-rose-50/80 border-rose-300 ring-2 ring-rose-500/20 shadow-sm"
-                            : "bg-slate-50/50 border-slate-200 hover:bg-slate-50"
+                            ? "bg-rose-50/90 border-rose-300 ring-2 ring-rose-500/20 shadow-sm"
+                            : "bg-slate-50/60 border-slate-200/80 hover:bg-slate-50"
                         }`}
                       >
                         <input
@@ -966,10 +996,10 @@ export default function MembersPage() {
                           name="member_status"
                           checked={currentMember.status === "absent_to_relaunch"}
                           onChange={() => setCurrentMember({ ...currentMember, status: "absent_to_relaunch" })}
-                          className="mt-0.5 text-rose-600 focus:ring-rose-500"
+                          className="mt-0.5 text-rose-600 focus:ring-rose-500 cursor-pointer"
                         />
                         <div>
-                          <div className="text-xs font-black text-rose-800 flex items-center gap-2">
+                          <div className="text-xs font-extrabold text-rose-800 flex items-center gap-2">
                             ⚠️ Absent à relancer
                           </div>
                           <p className="text-[11px] text-rose-600/90 font-medium mt-0.5">
@@ -982,7 +1012,7 @@ export default function MembersPage() {
                 </div>
 
                 {modalMode === "edit" && currentMember.id && currentMember.status !== "archived" && (
-                  <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
+                  <div className="pt-3 border-t border-slate-100/80 flex items-center justify-between">
                     <span className="text-xs font-semibold text-slate-600">Cette âme ne suit plus l&apos;église ?</span>
                     <button
                       type="button"
@@ -992,23 +1022,23 @@ export default function MembersPage() {
                       }}
                       className="px-3.5 py-2 rounded-xl text-xs font-bold text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-300 transition-colors cursor-pointer flex items-center gap-1.5 shadow-2xs"
                     >
-                      📦 Archiver ce fidèle
+                      <span className="material-symbols-outlined text-[15px]">archive</span> Archiver ce fidèle
                     </button>
                   </div>
                 )}
 
-                <div className="pt-4 flex items-center justify-end gap-3 border-t border-slate-100">
+                <div className="pt-4 flex items-center justify-end gap-3 border-t border-slate-100/80">
                   <button
                     type="button"
                     onClick={() => setModalMode(null)}
-                    className="px-4 py-2.5 rounded-2xl text-xs font-bold text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors cursor-pointer"
+                    className="px-5 py-2.5 rounded-2xl text-xs font-bold text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors cursor-pointer"
                   >
                     Annuler
                   </button>
                   <button
                     type="submit"
                     disabled={saving}
-                    className="px-6 py-2.5 rounded-2xl text-xs font-black text-white bg-gradient-to-r from-indigo-600 via-indigo-500 to-purple-600 hover:from-indigo-700 hover:to-purple-700 shadow-lg shadow-indigo-500/25 transition-all disabled:opacity-50 active:scale-[0.98] cursor-pointer"
+                    className="px-6 py-3 rounded-2xl font-headline-md font-extrabold text-xs text-white bg-gradient-to-r from-[#1e1b4b] via-[#312e81] to-[#4338ca] hover:from-[#312e81] hover:to-[#4338ca] shadow-lg shadow-indigo-950/25 transition-all disabled:opacity-50 active:scale-[0.98] cursor-pointer border border-[#fea619]/30 flex items-center gap-2"
                   >
                     {saving
                       ? "Enregistrement..."
