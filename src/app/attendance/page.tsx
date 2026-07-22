@@ -263,12 +263,9 @@ export default function AttendancePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center text-slate-600">
-        <div className="flex items-center gap-3 bg-white px-6 py-4 rounded-2xl shadow-md border border-slate-200 font-semibold text-sm">
-          <svg className="animate-spin h-5 w-5 text-indigo-600" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-          </svg>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-[#f8fafc] to-[#f1f5f9] flex items-center justify-center text-[#1e1b4b]">
+        <div className="glass-panel px-8 py-6 rounded-3xl shadow-xl flex items-center gap-4 border border-white/80 font-bold text-sm">
+          <div className="w-6 h-6 rounded-full border-3 border-indigo-600 border-t-transparent animate-spin" />
           <span>Chargement des listes de présence...</span>
         </div>
       </div>
@@ -280,7 +277,7 @@ export default function AttendancePage() {
   const absentCount = eligibleMembers.length - presentCount;
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-800 pb-20 font-sans">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-[#f8fafc] to-[#f1f5f9] text-[#1e1b4b] pb-24 font-sans selection:bg-[#fea619]/20">
       <Navbar
         role={profile?.role || "shepherd"}
         groupName={profile?.groups?.name}
@@ -289,14 +286,15 @@ export default function AttendancePage() {
 
       <main className="max-w-6xl mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
         {/* Header Section */}
-        <div className="glass-panel p-6 sm:p-8 rounded-3xl shadow-sm">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="glass-panel p-6 sm:p-8 rounded-3xl shadow-md border border-white/80 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-80 h-80 bg-gradient-to-bl from-indigo-500/10 via-amber-500/5 to-transparent rounded-full blur-3xl pointer-events-none" />
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 relative z-10">
             <div>
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#1e1b4b] text-[#e3dfff] mb-2 border border-[#fea619]/30 shadow-2xs">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#1e1b4b] text-[#e3dfff] mb-2.5 border border-[#fea619]/30 shadow-2xs">
                 <span className="material-symbols-outlined text-[15px] text-[#fea619]">event_available</span>
                 <span className="font-label-caps font-bold text-[11px] uppercase tracking-wider">Pointage & Présences</span>
               </div>
-              <h1 className="font-headline-md font-extrabold text-2xl sm:text-3xl text-[#1e1b4b] tracking-tight">
+              <h1 className="font-headline-md font-extrabold text-2xl sm:text-3xl lg:text-4xl text-[#1e1b4b] tracking-tight">
                 Pointage des Présences
               </h1>
               <p className="text-xs sm:text-sm text-[#47464f] mt-1 font-medium">
@@ -304,11 +302,13 @@ export default function AttendancePage() {
               </p>
             </div>
 
-            <WeekSelector selectedDate={selectedDate} onChangeDate={setSelectedDate} />
+            <div className="flex-shrink-0">
+              <WeekSelector selectedDate={selectedDate} onChangeDate={setSelectedDate} />
+            </div>
           </div>
 
           {/* Program Type Tabs */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5 mt-6 pt-6 border-t border-slate-200/80">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5 mt-6 pt-6 border-t border-slate-200/60 relative z-10">
             {programOptions.map((prog) => {
               const isActive = selectedProgram === prog.id;
               return (
@@ -317,12 +317,12 @@ export default function AttendancePage() {
                   onClick={() => setSelectedProgram(prog.id)}
                   className={`p-4.5 rounded-2xl text-left transition-all duration-300 flex flex-col justify-between cursor-pointer ${
                     isActive
-                      ? "bg-gradient-to-br from-[#1e1b4b] via-[#2d2a6e] to-[#1e1b4b] text-white shadow-xl shadow-indigo-950/30 scale-[1.03] border border-[#fea619]/50"
-                      : "bg-white border border-slate-200/80 text-slate-700 hover:text-[#1e1b4b] hover:bg-slate-50 hover:border-indigo-300 shadow-2xs"
+                      ? "bg-gradient-to-br from-[#1e1b4b] via-[#2d2a6e] to-[#1e1b4b] text-white shadow-xl shadow-indigo-950/20 scale-[1.03] border border-[#fea619]/60"
+                      : "glass-panel-interactive text-slate-700 hover:text-[#1e1b4b]"
                   }`}
                 >
                   <div className="flex items-center justify-between mb-3">
-                    <span className="text-2xl p-2 rounded-xl bg-slate-100/10 backdrop-blur-md">{prog.icon}</span>
+                    <span className="text-2xl p-2 rounded-xl bg-white/40 backdrop-blur-md shadow-2xs">{prog.icon}</span>
                     {isActive && <span className="w-2.5 h-2.5 rounded-full bg-[#fea619] shadow-md shadow-[#fea619]/50 animate-pulse" />}
                   </div>
                   <div>
@@ -338,7 +338,7 @@ export default function AttendancePage() {
         </div>
 
         {message && (
-          <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-300 text-emerald-900 text-sm font-black flex items-center justify-between shadow-md shadow-emerald-500/10 animate-fadeIn">
+          <div className="glass-panel p-4 rounded-2xl bg-emerald-50/90 border border-emerald-300 text-emerald-900 text-sm font-black flex items-center justify-between shadow-md shadow-emerald-500/10 animate-fadeIn">
             <span className="flex items-center gap-2">
               <span className="w-2.5 h-2.5 rounded-full bg-emerald-600 animate-ping" />
               <span>✓ {message}</span>
@@ -349,7 +349,7 @@ export default function AttendancePage() {
 
         {/* VIEW MODE: START */}
         {viewMode === "start" && (
-          <div className="bg-gradient-to-br from-white via-slate-50/50 to-indigo-50/20 border border-slate-200/80 rounded-3xl p-8 sm:p-14 text-center shadow-xl shadow-slate-200/50 space-y-7 relative overflow-hidden">
+          <div className="glass-panel rounded-3xl p-8 sm:p-14 text-center shadow-lg border border-white/80 space-y-7 relative overflow-hidden">
             <div className="w-20 h-20 rounded-3xl bg-gradient-to-tr from-indigo-100 via-purple-50 to-amber-50 border border-indigo-200/60 flex items-center justify-center mx-auto text-indigo-700 shadow-lg shadow-indigo-500/10 transform hover:scale-105 transition-all">
               <span className="text-4xl">📋</span>
             </div>
@@ -365,7 +365,7 @@ export default function AttendancePage() {
             </div>
 
             {isLocked ? (
-              <div className="max-w-md mx-auto p-5 rounded-3xl bg-amber-50 border border-amber-300 text-amber-900 space-y-3.5 shadow-md shadow-amber-500/10">
+              <div className="max-w-md mx-auto p-5 rounded-3xl bg-amber-50/90 border border-amber-300 text-amber-900 space-y-3.5 shadow-md shadow-amber-500/10">
                 <div className="flex items-center justify-center gap-2 font-black text-sm text-amber-800">
                   <span>🔒 Délai légal de 7 jours expiré</span>
                 </div>
@@ -374,7 +374,7 @@ export default function AttendancePage() {
                 </p>
                 <button
                   onClick={() => setViewMode("summary")}
-                  className="w-full px-6 py-3.5 rounded-2xl font-black text-xs bg-amber-600 text-white hover:bg-amber-700 transition-all shadow-md shadow-amber-600/20"
+                  className="w-full px-6 py-3.5 rounded-2xl font-black text-xs bg-amber-600 text-white hover:bg-amber-700 transition-all shadow-md shadow-amber-600/20 cursor-pointer"
                 >
                   📋 Consulter le Rapport en Lecture Seule
                 </button>
@@ -387,13 +387,13 @@ export default function AttendancePage() {
                       setCurrentIndex(0);
                       setViewMode("wizard");
                     }}
-                    className="w-full sm:w-auto px-8 py-4.5 rounded-2xl font-black text-sm text-[#1e1b4b] bg-gradient-to-r from-[#fea619] via-[#ffb947] to-[#fea619] hover:from-amber-400 hover:to-amber-400 shadow-xl shadow-[#fea619]/25 transition-all transform hover:-translate-y-0.5 active:translate-y-0 flex items-center justify-center gap-2"
+                    className="w-full sm:w-auto px-8 py-4.5 rounded-2xl font-black text-sm text-[#1e1b4b] bg-gradient-to-r from-[#fea619] via-[#ffb947] to-[#fea619] hover:from-amber-400 hover:to-amber-400 shadow-xl shadow-[#fea619]/25 transition-all transform hover:-translate-y-0.5 active:translate-y-0 flex items-center justify-center gap-2 cursor-pointer"
                   >
                     <span>🚀 Démarrer l&apos;appel pas-à-pas ({eligibleMembers.length} conviés)</span>
                   </button>
                   <button
                     onClick={() => setViewMode("summary")}
-                    className="w-full sm:w-auto px-7 py-4.5 rounded-2xl font-black text-xs text-slate-700 bg-white hover:bg-slate-50 transition-all border border-slate-200 shadow-md shadow-slate-200/50 flex items-center justify-center gap-2"
+                    className="w-full sm:w-auto px-7 py-4.5 rounded-2xl font-black text-xs text-slate-700 bg-white/80 hover:bg-white transition-all border border-slate-200 shadow-md shadow-slate-200/50 flex items-center justify-center gap-2 cursor-pointer"
                   >
                     <span>📋 Voir la grille globale récapitulative</span>
                   </button>
@@ -405,20 +405,20 @@ export default function AttendancePage() {
 
         {/* VIEW MODE: WIZARD */}
         {viewMode === "wizard" && activeMember && (
-          <div className="bg-white border border-slate-200/80 rounded-3xl p-6 sm:p-10 shadow-2xl shadow-indigo-950/10 space-y-8 animate-fadeIn relative overflow-hidden">
+          <div className="glass-panel rounded-3xl p-6 sm:p-10 shadow-2xl border border-white/80 space-y-8 animate-fadeIn relative overflow-hidden">
             {/* Wizard Header Bar */}
-            <div className="flex items-center justify-between pb-6 border-b border-slate-200/80 gap-4">
+            <div className="flex items-center justify-between pb-6 border-b border-slate-200/60 gap-4">
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => {
                     if (currentIndex > 0) setCurrentIndex((prev) => prev - 1);
                   }}
                   disabled={currentIndex === 0}
-                  className="px-4 py-2.5 rounded-2xl text-xs font-bold bg-slate-100 text-slate-700 hover:bg-slate-200 disabled:opacity-30 transition-all flex items-center gap-1.5 shadow-2xs"
+                  className="px-4 py-2.5 rounded-2xl text-xs font-bold bg-slate-100 text-slate-700 hover:bg-slate-200 disabled:opacity-30 transition-all flex items-center gap-1.5 shadow-2xs cursor-pointer"
                 >
                   ← Précédent
                 </button>
-                <div className="text-xs sm:text-sm font-black text-slate-700 bg-slate-50 px-3.5 py-2 rounded-2xl border border-slate-200/60">
+                <div className="text-xs sm:text-sm font-black text-slate-700 bg-slate-50/80 px-3.5 py-2 rounded-2xl border border-slate-200/60">
                   Fidèle <span className="text-[#1e1b4b] font-extrabold">{currentIndex + 1}</span> sur {eligibleMembers.length}
                 </div>
               </div>
@@ -433,7 +433,7 @@ export default function AttendancePage() {
 
               <button
                 onClick={() => setViewMode("start")}
-                className="px-4 py-2.5 rounded-2xl text-xs font-black text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200/60 transition-colors shadow-2xs"
+                className="px-4 py-2.5 rounded-2xl text-xs font-black text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200/60 transition-colors shadow-2xs cursor-pointer"
               >
                 ✕ Quitter l&apos;appel
               </button>
@@ -496,7 +496,7 @@ export default function AttendancePage() {
 
               {/* If Sunday service and marked Absent -> Show Absence Reason prompt */}
               {selectedProgram === "sunday_service" && attendanceState[activeMember.id] === false && (
-                <div className="mt-8 p-6 rounded-3xl bg-rose-50/80 border border-rose-200 text-left space-y-4 animate-fadeIn shadow-md">
+                <div className="mt-8 p-6 rounded-3xl bg-rose-50/90 border border-rose-200 text-left space-y-4 animate-fadeIn shadow-md">
                   <label className="block text-xs font-black text-rose-950 uppercase tracking-wider">
                     📝 Motif ou raison de l&apos;absence :
                   </label>
@@ -506,7 +506,7 @@ export default function AttendancePage() {
                         key={chip}
                         type="button"
                         onClick={() => setAbsenceReasons({ ...absenceReasons, [activeMember.id]: chip })}
-                        className="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-white text-rose-900 border border-rose-300 hover:bg-rose-100 transition-colors shadow-2xs"
+                        className="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-white text-rose-900 border border-rose-300 hover:bg-rose-100 transition-colors shadow-2xs cursor-pointer"
                       >
                         {chip}
                       </button>
@@ -523,7 +523,7 @@ export default function AttendancePage() {
                     <button
                       type="button"
                       onClick={advanceWizard}
-                      className="px-7 py-3.5 rounded-2xl font-black text-sm text-white bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-700 hover:to-red-700 transition-all shadow-md shadow-rose-500/20"
+                      className="px-7 py-3.5 rounded-2xl font-black text-sm text-white bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-700 hover:to-red-700 transition-all shadow-md shadow-rose-500/20 cursor-pointer"
                     >
                       Suivant →
                     </button>
@@ -536,8 +536,8 @@ export default function AttendancePage() {
 
         {/* VIEW MODE: SUMMARY */}
         {viewMode === "summary" && (
-          <div className="bg-white border border-slate-200/80 rounded-3xl p-6 sm:p-10 shadow-2xl shadow-indigo-950/10 space-y-8 animate-fadeIn">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-6 border-b border-slate-200/80 gap-4">
+          <div className="glass-panel rounded-3xl p-6 sm:p-10 shadow-lg border border-white/80 space-y-8 animate-fadeIn">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-6 border-b border-slate-200/60 gap-4">
               <div>
                 <h2 className="text-xl sm:text-2xl font-black text-[#1e1b4b] flex items-center gap-2.5">
                   <span className="p-2 rounded-xl bg-indigo-50 text-indigo-700 text-lg">📊</span>
@@ -572,13 +572,13 @@ export default function AttendancePage() {
                 <div className="flex gap-2.5">
                   <button
                     onClick={() => handleSelectAll(true)}
-                    className="px-4 py-2 rounded-xl bg-emerald-100/80 text-emerald-900 hover:bg-emerald-200 font-black transition-colors shadow-2xs"
+                    className="px-4 py-2 rounded-xl bg-emerald-100/80 text-emerald-900 hover:bg-emerald-200 font-black transition-colors shadow-2xs cursor-pointer"
                   >
                     ✓ Tous Présents
                   </button>
                   <button
                     onClick={() => handleSelectAll(false)}
-                    className="px-4 py-2 rounded-xl bg-rose-100/80 text-rose-900 hover:bg-rose-200 font-black transition-colors shadow-2xs"
+                    className="px-4 py-2 rounded-xl bg-rose-100/80 text-rose-900 hover:bg-rose-200 font-black transition-colors shadow-2xs cursor-pointer"
                   >
                     ✕ Tous Absents
                   </button>
@@ -614,7 +614,7 @@ export default function AttendancePage() {
                         {!isLocked && (
                           <button
                             onClick={() => handleQuickToggle(member.id, true)}
-                            className="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-white border border-slate-200 text-slate-600 hover:text-rose-600 hover:border-rose-300 transition-colors shadow-2xs"
+                            className="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-white border border-slate-200 text-slate-600 hover:text-rose-600 hover:border-rose-300 transition-colors shadow-2xs cursor-pointer"
                           >
                             Basculer Absent
                           </button>
@@ -656,7 +656,7 @@ export default function AttendancePage() {
                           {!isLocked && (
                             <button
                               onClick={() => handleQuickToggle(member.id, false)}
-                              className="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-white border border-slate-200 text-slate-600 hover:text-emerald-600 hover:border-emerald-300 transition-colors shadow-2xs"
+                              className="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-white border border-slate-200 text-slate-600 hover:text-emerald-600 hover:border-emerald-300 transition-colors shadow-2xs cursor-pointer"
                             >
                               Basculer Présent
                             </button>
@@ -693,13 +693,13 @@ export default function AttendancePage() {
             </div>
 
             {/* Footer Action Bar */}
-            <div className="pt-6 border-t border-slate-200/80 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="pt-6 border-t border-slate-200/60 flex flex-col sm:flex-row items-center justify-between gap-4">
               <button
                 onClick={() => {
                   setCurrentIndex(0);
                   setViewMode("wizard");
                 }}
-                className="w-full sm:w-auto px-6 py-3.5 rounded-2xl font-bold text-xs bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors border border-slate-200 shadow-2xs"
+                className="w-full sm:w-auto px-6 py-3.5 rounded-2xl font-bold text-xs bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors border border-slate-200 shadow-2xs cursor-pointer"
               >
                 ← Recommencer l&apos;appel pas-à-pas
               </button>
@@ -712,7 +712,7 @@ export default function AttendancePage() {
                 <button
                   onClick={handleSaveAttendance}
                   disabled={saving || eligibleMembers.length === 0}
-                  className="w-full sm:w-auto px-8 py-4 rounded-2xl font-black text-sm text-[#1e1b4b] bg-gradient-to-r from-[#fea619] via-[#ffb947] to-[#fea619] hover:from-amber-400 hover:to-amber-400 shadow-xl shadow-[#fea619]/25 transition-all transform hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50 flex items-center justify-center gap-2"
+                  className="w-full sm:w-auto px-8 py-4 rounded-2xl font-black text-sm text-[#1e1b4b] bg-gradient-to-r from-[#fea619] via-[#ffb947] to-[#fea619] hover:from-amber-400 hover:to-amber-400 shadow-xl shadow-[#fea619]/25 transition-all transform hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
                 >
                   {saving ? "Enregistrement en cours..." : "💾 Valider & Enregistrer l'appel"}
                 </button>

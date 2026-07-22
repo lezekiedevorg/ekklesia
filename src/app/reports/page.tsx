@@ -6,6 +6,7 @@ import Navbar from "@/components/layout/Navbar";
 import { useRouter } from "next/navigation";
 import { formatWeekInterval, getMondayDateStr, getSundayDateStr } from "@/lib/utils/dateFormatter";
 import WeekSelector from "@/components/common/WeekSelector";
+import { computeProgramsSummary } from "@/lib/utils/programs";
 
 interface Profile {
   id: string;
@@ -88,11 +89,16 @@ interface WeeklyReport {
       monthly_in_person_done?: boolean;
       monthly_department_done?: boolean;
       monthly_offering_done?: boolean;
+      [key: string]: any;
     } | null;
     programs_summary?: ProgramSummaryItem[];
+    summary_data?: ProgramSummaryItem[];
+    [key: string]: any;
   };
   profiles?: { first_name: string; last_name: string };
   groups?: { name: string };
+  summary_data?: ProgramSummaryItem[];
+  [key: string]: any;
 }
 
 function DisciplineReportDetails({
@@ -100,7 +106,7 @@ function DisciplineReportDetails({
   programsSummary = [],
   isDark = false,
 }: {
-  discipline: WeeklyReport["content"]["discipline"] | null;
+  discipline: any;
   programsSummary?: ProgramSummaryItem[];
   isDark?: boolean;
 }) {
@@ -461,41 +467,8 @@ export default function ReportsPage() {
       .gte("date", mondayStr)
       .lte("date", sundayStr) : { data: [] };
 
-    // Compute KPIs for every program of the week
-    const programDefinitions = [
-      { id: "sunday_service", label: "Dimanche (Culte)", icon: "🌞" },
-      { id: "tuesday_class", label: "Mardi (Classe d'affermissement)", icon: "📘" },
-      { id: "wednesday_class", label: "Mercredi (Classe de fondements)", icon: "📗" },
-      { id: "thursday_online", label: "Jeudi (Prière en ligne)", icon: "🌐" },
-      { id: "friday_service", label: "Vendredi (Veillée / Culte)", icon: "🔥" },
-    ];
-
-    const programsSummary: ProgramSummaryItem[] = programDefinitions.map((prog) => {
-      let eligibleMembers = mems || [];
-      if (prog.id === "tuesday_class") {
-        eligibleMembers = (mems || []).filter((m) => m.status === "member" && m.track === "tuesday_class");
-      } else if (prog.id === "wednesday_class") {
-        eligibleMembers = (mems || []).filter((m) => m.status === "member" && m.track === "wednesday_class");
-      }
-      const eligibleCount = eligibleMembers.length;
-
-      const presentIdsForProg = new Set(
-        (attData || [])
-          .filter((a) => a.program_type === prog.id && a.is_present)
-          .map((a) => a.member_id)
-      );
-      const presentCount = presentIdsForProg.size;
-      const ratio = eligibleCount > 0 ? Math.round((presentCount / eligibleCount) * 100) : 0;
-
-      return {
-        program_type: prog.id,
-        label: prog.label,
-        icon: prog.icon,
-        present_count: presentCount,
-        eligible_count: eligibleCount,
-        ratio_pct: ratio,
-      };
-    });
+    // Compute KPIs for every program of the week using our centralized helper
+    const programsSummary: ProgramSummaryItem[] = computeProgramsSummary(mems || [], attData || []);
 
     const sundayProg = programsSummary.find((p) => p.program_type === "sunday_service");
     const presentCount = sundayProg?.present_count || 0;
@@ -537,7 +510,7 @@ export default function ReportsPage() {
       .eq("shepherd_id", shepherdId)
       .eq("week_start_date", mondayStr);
 
-    const mapDisc = (d: any) => ({
+    const mapDisc = (d: any): any => ({
       ...d,
       daily_prayer_done: d.daily_prayer_done,
       daily_meditation_done: d.daily_meditation_done,
@@ -981,39 +954,39 @@ export default function ReportsPage() {
 
         {/* Reports Archive / Validation List */}
         <div className="space-y-6 pt-4">
-          <div className="flex items-center justify-between border-b border-slate-200/80 pb-4">
-            <h2 className="text-lg font-black text-[#1e1b4b] flex items-center gap-2.5">
-              <span className="w-3.5 h-3.5 rounded-full bg-gradient-to-tr from-[#1e1b4b] to-[#fea619] shadow-sm shadow-indigo-500/50" />
+          <div className="flex items-center justify-between border-b border-slate-200/60 pb-5">
+            <h2 className="text-xl sm:text-2xl font-headline-md font-extrabold text-[#1e1b4b] flex items-center gap-3">
+              <span className="w-3.5 h-3.5 rounded-full bg-gradient-to-tr from-[#1e1b4b] to-[#fea619] shadow-sm shadow-[#1e1b4b]/30" />
               <span>{profile?.role === "shepherd" ? "Vos Rapports Soumis" : "Rapports Hebdomadaires Reçus"}</span>
             </h2>
-            <span className="text-xs font-bold bg-indigo-50 text-indigo-700 px-3 py-1 rounded-xl border border-indigo-200/60">
+            <span className="px-3.5 py-1.5 rounded-full text-xs font-label-caps font-extrabold uppercase tracking-wider bg-[#1e1b4b] text-white border border-[#fea619]/40 shadow-2xs">
               {filteredReports.length} rapport(s) affiché(s)
             </span>
           </div>
 
           {filteredReports.length === 0 ? (
-            <div className="bg-white border border-slate-200/80 rounded-3xl p-12 text-center font-semibold text-slate-500 text-xs shadow-sm">
+            <div className="glass-panel rounded-3xl p-12 text-center font-bold text-[#47464f] text-sm border border-white/80 shadow-md">
               Aucun rapport dans cette vue.
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-5">
               {filteredReports.map((report) => (
                 <div
                   key={report.id}
-                  className="bg-white border border-slate-200/80 rounded-3xl p-6 sm:p-7 shadow-xl shadow-slate-200/40 space-y-5 transition-all hover:border-indigo-300/80 hover:shadow-2xl hover:shadow-indigo-500/5"
+                  className="glass-panel-interactive rounded-3xl p-6 sm:p-8 border border-white/80 shadow-md space-y-6 relative overflow-hidden transition-all"
                 >
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4.5">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200/60 pb-5">
                     <div>
                       <div className="flex items-center gap-3 flex-wrap">
-                        <h3 className="text-base font-black text-[#1e1b4b]">
+                        <h3 className="text-lg sm:text-xl font-headline-md font-extrabold text-[#1e1b4b]">
                           {report.profiles ? `${report.profiles.first_name} ${report.profiles.last_name}` : "Berger"}
                         </h3>
                         {report.groups && (
-                          <span className="px-3 py-1 rounded-xl bg-indigo-50/80 text-indigo-900 text-xs font-black border border-indigo-200/60 shadow-2xs">
-                            Groupe {report.groups.name}
+                          <span className="px-3 py-1 rounded-xl bg-[#1e1b4b]/10 text-[#1e1b4b] font-bold text-xs border border-[#1e1b4b]/20 shadow-2xs">
+                            ⚡ Groupe {report.groups.name}
                           </span>
                         )}
-                        <span className="text-xs font-black text-indigo-600 bg-slate-50 px-3 py-1 rounded-xl border border-slate-200">
+                        <span className="text-xs font-bold text-[#1e1b4b] bg-white/80 px-3.5 py-1.5 rounded-xl border border-slate-200/80 shadow-2xs">
                           {formatWeekInterval(report.report_date)}
                         </span>
                       </div>
@@ -1021,19 +994,19 @@ export default function ReportsPage() {
 
                     <div className="flex items-center gap-3 flex-wrap">
                       {report.status === "submitted" && (
-                        <span className="px-3.5 py-1.5 rounded-full text-xs font-black bg-amber-50 text-amber-900 border border-amber-300 shadow-2xs flex items-center gap-1.5">
+                        <span className="px-3.5 py-1.5 rounded-full text-xs font-bold bg-amber-500/15 text-amber-900 border border-amber-500/30 shadow-2xs flex items-center gap-1.5">
                           <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
                           <span>En attente de validation</span>
                         </span>
                       )}
                       {report.status === "approved" && (
-                        <span className="px-3.5 py-1.5 rounded-full text-xs font-black bg-emerald-50 text-emerald-900 border border-emerald-300 shadow-2xs flex items-center gap-1.5">
+                        <span className="px-3.5 py-1.5 rounded-full text-xs font-bold bg-emerald-500/15 text-emerald-900 border border-emerald-500/30 shadow-2xs flex items-center gap-1.5">
                           <span className="w-2 h-2 rounded-full bg-emerald-600" />
                           <span>Approuvé par le responsable ✓</span>
                         </span>
                       )}
                       {report.status === "rejected" && (
-                        <span className="px-3.5 py-1.5 rounded-full text-xs font-black bg-rose-50 text-rose-900 border border-rose-300 shadow-2xs flex items-center gap-1.5">
+                        <span className="px-3.5 py-1.5 rounded-full text-xs font-bold bg-rose-500/15 text-rose-900 border border-rose-500/30 shadow-2xs flex items-center gap-1.5">
                           <span className="w-2 h-2 rounded-full bg-rose-600" />
                           <span>À réviser ✕</span>
                         </span>
@@ -1041,16 +1014,16 @@ export default function ReportsPage() {
 
                       {/* Approval controls for Leader / Pastor */}
                       {profile?.role !== "shepherd" && report.status === "submitted" && (
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2.5">
                           <button
                             onClick={() => handleUpdateStatus(report.id, "approved")}
-                            className="px-4 py-2 rounded-xl text-xs font-black bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white transition-all shadow-md shadow-emerald-600/20 transform hover:-translate-y-0.5"
+                            className="px-5 py-2.5 rounded-2xl text-xs font-black bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white transition-all shadow-md shadow-emerald-600/20 transform hover:-translate-y-0.5 active:translate-y-0 cursor-pointer"
                           >
                             Valider ✓
                           </button>
                           <button
                             onClick={() => handleUpdateStatus(report.id, "rejected")}
-                            className="px-4 py-2 rounded-xl text-xs font-black bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-700 hover:to-red-700 text-white transition-all shadow-md shadow-rose-600/20 transform hover:-translate-y-0.5"
+                            className="px-5 py-2.5 rounded-2xl text-xs font-black bg-rose-50/90 hover:bg-rose-100 text-rose-700 border border-rose-300 transition-all transform hover:-translate-y-0.5 active:translate-y-0 cursor-pointer"
                           >
                             Rejeter ✕
                           </button>
@@ -1061,31 +1034,31 @@ export default function ReportsPage() {
 
                   {/* Report Content Details */}
                   {report.content && (
-                    <div className="space-y-4">
+                    <div className="space-y-5">
                       {report.content.programs_summary && report.content.programs_summary.length > 0 && (
-                        <div className="bg-slate-50/80 p-5 rounded-2xl border border-slate-200/80">
-                          <div className="text-xs font-black text-[#1e1b4b] uppercase tracking-wider mb-3 flex items-center gap-2">
+                        <div className="bg-white/50 backdrop-blur-md p-5 sm:p-6 rounded-2xl border border-white/80 shadow-2xs">
+                          <div className="text-xs font-label-caps font-extrabold text-[#1e1b4b] uppercase tracking-wider mb-3 flex items-center gap-2">
                             <span>📊</span>
-                            <span>Présence aux programmes de la semaine • <span className="text-indigo-600">{formatWeekInterval(report.report_date)}</span></span>
+                            <span>Présence aux programmes de la semaine • <span className="text-[#fea619]">{formatWeekInterval(report.report_date)}</span></span>
                           </div>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3.5">
                             {report.content.programs_summary.map((prog, idx) => (
-                              <div key={idx} className="p-3.5 rounded-xl bg-white border border-slate-200/80 flex flex-col justify-between text-xs shadow-2xs hover:border-indigo-300 transition-all">
-                                <div className="flex items-center gap-2 font-bold text-slate-700">
+                              <div key={idx} className="p-4 rounded-2xl bg-white/80 border border-slate-200/80 flex flex-col justify-between text-xs shadow-2xs hover:border-[#1e1b4b]/40 transition-all">
+                                <div className="flex items-center gap-2 font-bold text-[#1e1b4b]">
                                   <span className="text-base">{prog.icon}</span>
                                   <span className="line-clamp-1">{prog.label}</span>
                                 </div>
-                                <div className="mt-2.5 flex items-center justify-between font-black">
-                                  <span className="text-slate-900 text-sm">{prog.present_count} <span className="text-xs font-semibold text-slate-500">/ {prog.eligible_count}</span></span>
-                                  <span className={`px-2 py-0.5 rounded-md text-xs ${
-                                    prog.ratio_pct >= 75 ? "bg-emerald-100 text-emerald-900 font-extrabold" : prog.ratio_pct >= 50 ? "bg-amber-100 text-amber-900 font-extrabold" : "bg-rose-100 text-rose-900 font-extrabold"
+                                <div className="mt-3 flex items-center justify-between font-black">
+                                  <span className="text-[#1e1b4b] text-sm">{prog.present_count} <span className="text-xs font-bold text-slate-500">/ {prog.eligible_count}</span></span>
+                                  <span className={`px-2 py-0.5 rounded-md text-xs font-extrabold ${
+                                    prog.ratio_pct >= 75 ? "bg-emerald-100 text-emerald-900" : prog.ratio_pct >= 50 ? "bg-amber-100 text-amber-900" : "bg-rose-100 text-rose-900"
                                   }`}>
                                     {prog.ratio_pct}%
                                   </span>
                                 </div>
-                                <div className="w-full bg-slate-200 h-1.5 rounded-full mt-2 overflow-hidden">
+                                <div className="w-full bg-slate-200/80 h-1.5 rounded-full mt-2.5 overflow-hidden">
                                   <div
-                                    className={`h-full rounded-full ${prog.ratio_pct >= 75 ? "bg-emerald-600" : prog.ratio_pct >= 50 ? "bg-amber-500" : "bg-rose-500"}`}
+                                    className={`h-full rounded-full ${prog.ratio_pct >= 75 ? "bg-emerald-500" : prog.ratio_pct >= 50 ? "bg-[#fea619]" : "bg-rose-500"}`}
                                     style={{ width: `${Math.min(prog.ratio_pct, 100)}%` }}
                                   />
                                 </div>
@@ -1096,20 +1069,20 @@ export default function ReportsPage() {
                       )}
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-                        <div className="bg-gradient-to-br from-slate-50 to-indigo-50/30 p-4.5 rounded-2xl border border-slate-200/80 shadow-2xs">
-                          <span className="text-slate-500 font-bold uppercase tracking-wider text-[10px]">Présence Dominicale :</span>
-                          <span className="text-base font-black text-[#1e1b4b] mt-1 block">
-                            {report.content.sunday_present_count} / {report.content.total_members} <span className="text-emerald-600 font-extrabold">({report.content.attendance_ratio_pct}%)</span>
+                        <div className="bg-white/60 backdrop-blur-md p-5 rounded-2xl border border-white/80 shadow-2xs">
+                          <span className="text-slate-500 font-label-caps font-extrabold uppercase tracking-wider text-[11px]">Présence Dominicale :</span>
+                          <span className="text-xl font-headline-md font-extrabold text-[#1e1b4b] mt-1.5 block">
+                            {report.content.sunday_present_count} / {report.content.total_members} <span className="text-emerald-600 font-extrabold text-base">({report.content.attendance_ratio_pct}%)</span>
                           </span>
                         </div>
-                        <div className="bg-gradient-to-br from-slate-50 to-rose-50/30 p-4.5 rounded-2xl border border-slate-200/80 shadow-2xs">
-                          <span className="text-slate-500 font-bold uppercase tracking-wider text-[10px]">Absents et Suivi :</span>
-                          <span className="text-base font-black text-rose-600 mt-1 block">
+                        <div className="bg-white/60 backdrop-blur-md p-5 rounded-2xl border border-white/80 shadow-2xs">
+                          <span className="text-slate-500 font-label-caps font-extrabold uppercase tracking-wider text-[11px]">Absents et Suivi :</span>
+                          <span className="text-xl font-headline-md font-extrabold text-rose-600 mt-1.5 block">
                             {report.content.absentees_with_reasons?.length || 0} fidèle(s) absent(s)
                           </span>
                         </div>
-                        <div className="bg-gradient-to-br from-slate-50 to-purple-50/30 p-5 rounded-2xl border border-slate-200/80 shadow-2xs md:col-span-2">
-                          <div className="text-slate-500 font-bold uppercase tracking-wider text-[10px] mb-1 flex items-center justify-between">
+                        <div className="bg-white/60 backdrop-blur-md p-5 sm:p-6 rounded-2xl border border-white/80 shadow-2xs md:col-span-2">
+                          <div className="text-slate-500 font-label-caps font-extrabold uppercase tracking-wider text-[11px] mb-2 flex items-center justify-between">
                             <span>Discipline & Consécration Pastorale (Détail Complet) :</span>
                             <span>🙏</span>
                           </div>
@@ -1117,38 +1090,38 @@ export default function ReportsPage() {
                         </div>
 
                         {/* Absentees and New Members in Saved Report */}
-                        <div className="bg-white p-4.5 rounded-2xl border border-slate-200/80 shadow-2xs space-y-2.5">
-                          <h4 className="text-xs font-black uppercase tracking-wider text-rose-600 flex items-center justify-between border-b border-slate-100 pb-2">
+                        <div className="bg-white/60 backdrop-blur-md p-5 rounded-2xl border border-white/80 shadow-2xs space-y-3">
+                          <h4 className="text-xs font-label-caps font-extrabold uppercase tracking-wider text-rose-600 flex items-center justify-between border-b border-slate-200/60 pb-2.5">
                             <span>⚠️ Liste détaillée des Absents</span>
-                            <span className="px-2 py-0.5 rounded bg-rose-100 text-rose-800 text-[10px]">{report.content.absentees_with_reasons?.length || 0}</span>
+                            <span className="px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800 font-extrabold text-[11px]">{report.content.absentees_with_reasons?.length || 0}</span>
                           </h4>
                           {!report.content.absentees_with_reasons || report.content.absentees_with_reasons.length === 0 ? (
                             <div className="text-xs text-emerald-700 font-bold italic py-1">✨ Aucun absent au culte</div>
                           ) : (
-                            <ul className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+                            <ul className="space-y-2 max-h-48 overflow-y-auto pr-1">
                               {report.content.absentees_with_reasons.map((abs, idx) => (
-                                <li key={idx} className="flex justify-between items-center text-xs p-2 rounded-lg bg-slate-50 border border-slate-150">
-                                  <span className="font-bold text-slate-800">{abs.name}</span>
-                                  <span className="text-rose-600 italic">{abs.reason}</span>
+                                <li key={idx} className="flex justify-between items-center text-xs p-2.5 rounded-xl bg-white/80 border border-slate-200/80">
+                                  <span className="font-bold text-[#1e1b4b]">{abs.name}</span>
+                                  <span className="text-rose-600 font-medium italic">{abs.reason}</span>
                                 </li>
                               ))}
                             </ul>
                           )}
                         </div>
 
-                        <div className="bg-white p-4.5 rounded-2xl border border-slate-200/80 shadow-2xs space-y-2.5">
-                          <h4 className="text-xs font-black uppercase tracking-wider text-indigo-900 flex items-center justify-between border-b border-slate-100 pb-2">
+                        <div className="bg-white/60 backdrop-blur-md p-5 rounded-2xl border border-white/80 shadow-2xs space-y-3">
+                          <h4 className="text-xs font-label-caps font-extrabold uppercase tracking-wider text-[#1e1b4b] flex items-center justify-between border-b border-slate-200/60 pb-2.5">
                             <span>🌱 Progression Nouveaux Membres</span>
-                            <span className="px-2 py-0.5 rounded bg-indigo-100 text-indigo-900 text-[10px]">{report.content.new_members_progression?.length || 0}</span>
+                            <span className="px-2.5 py-0.5 rounded-full bg-[#1e1b4b]/10 text-[#1e1b4b] font-extrabold text-[11px]">{report.content.new_members_progression?.length || 0}</span>
                           </h4>
                           {!report.content.new_members_progression || report.content.new_members_progression.length === 0 ? (
                             <div className="text-xs text-slate-500 italic py-1">Aucun nouveau membre (4 dimanches)</div>
                           ) : (
-                            <ul className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+                            <ul className="space-y-2 max-h-48 overflow-y-auto pr-1">
                               {report.content.new_members_progression.map((newM, idx) => (
-                                <li key={idx} className="flex justify-between items-center text-xs p-2 rounded-lg bg-slate-50 border border-slate-150">
-                                  <span className="font-bold text-slate-800">{newM.name}</span>
-                                  <span className="px-2 py-0.5 rounded bg-amber-100 text-amber-900 font-extrabold text-[10px]">{newM.count} / 4 Dim.</span>
+                                <li key={idx} className="flex justify-between items-center text-xs p-2.5 rounded-xl bg-white/80 border border-slate-200/80">
+                                  <span className="font-bold text-[#1e1b4b]">{newM.name}</span>
+                                  <span className="px-2.5 py-0.5 rounded-lg bg-[#fea619]/20 text-[#1e1b4b] font-extrabold text-[11px] border border-[#fea619]/30">{newM.count} / 4 Dim.</span>
                                 </li>
                               ))}
                             </ul>
@@ -1156,11 +1129,11 @@ export default function ReportsPage() {
                         </div>
 
                         {/* Attestation in Saved Report */}
-                        <div className="bg-gradient-to-br from-amber-50/50 to-indigo-50/40 p-4 rounded-2xl border border-amber-200/60 md:col-span-2 flex items-start gap-3 text-xs text-slate-700 italic">
+                        <div className="bg-gradient-to-br from-[#fea619]/10 to-[#1e1b4b]/5 p-5 rounded-2xl border border-[#fea619]/30 md:col-span-2 flex items-start gap-3.5 text-xs text-[#1e1b4b] italic shadow-2xs">
                           <span className="text-base not-italic">📜</span>
                           <div>
-                            <span className="font-black not-italic block text-indigo-950 mb-0.5 uppercase text-[10px] tracking-wider">Attestation sur l'honneur du berger :</span>
-                            "Je soussigné, berger <span className="font-black text-indigo-950 not-italic">{report.profiles?.first_name} {report.profiles?.last_name}</span>, atteste en toute conscience et devant le Seigneur que l'ensemble des informations mentionnées dans ce rapport hebdomadaire sont exactes, sincères et conformes à la vérité."
+                            <span className="font-label-caps font-extrabold not-italic block text-[#1e1b4b] mb-1 uppercase text-[11px] tracking-wider">Attestation sur l'honneur du berger :</span>
+                            "Je soussigné, berger <span className="font-extrabold text-[#1e1b4b] not-italic">{report.profiles?.first_name} {report.profiles?.last_name}</span>, atteste en toute conscience et devant le Seigneur que l'ensemble des informations mentionnées dans ce rapport hebdomadaire sont exactes, sincères et conformes à la vérité."
                           </div>
                         </div>
                       </div>

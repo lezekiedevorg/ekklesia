@@ -106,8 +106,16 @@ export default function DashboardPage() {
             .select("status")
             .is("archived_at", null)
             .neq("status", "archived");
-          const { data: shepherds } = await supabase.from("profiles").select("id").eq("role", "shepherd");
-          const { data: reports } = await supabase.from("weekly_reports").select("id").eq("status", "submitted");
+
+          const { data: shepherds } = await supabase
+            .from("profiles")
+            .select("id")
+            .eq("role", "shepherd");
+
+          const { data: reports } = await supabase
+            .from("weekly_reports")
+            .select("id")
+            .eq("status", "submitted");
 
           setStats({
             totalMembers: members?.length || 0,
@@ -118,31 +126,31 @@ export default function DashboardPage() {
           });
         }
       } catch (err) {
-        console.error("Erreur de chargement du tableau de bord:", err);
+        console.error("Erreur de chargement du dashboard:", err);
       } finally {
         setLoading(false);
       }
     }
 
     fetchDashboardData();
-  }, [router, supabase]);
+  }, [supabase, router, selectedDate]);
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#f7f9fb] flex items-center justify-center text-[#47464f]">
-        <div className="glass-panel px-6 py-4 rounded-2xl flex items-center gap-3 font-label-caps font-bold text-sm">
+      <div className="min-h-screen bg-[#FAF9F6] flex items-center justify-center text-slate-600 font-sans">
+        <div className="glass-panel px-6 py-4 rounded-2xl flex items-center gap-3.5 font-label-caps font-bold text-sm shadow-xl">
           <svg className="animate-spin h-5 w-5 text-[#1e1b4b]" fill="none" viewBox="0 0 24 24">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
           </svg>
-          <span>Chargement du Sanctuaire...</span>
+          <span>Ouverture du Sanctuaire & Chargement des Indicateurs...</span>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#f7f9fb] text-[#191c1e] pb-24 font-sans">
+    <div className="min-h-screen bg-[#FAF9F6] text-slate-900 pb-28 font-sans">
       <Navbar
         role={profile?.role || "shepherd"}
         groupName={profile?.groups?.name}
@@ -150,14 +158,16 @@ export default function DashboardPage() {
       />
 
       <main className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 space-y-8 animate-fade-in-up">
-        {/* Header Section with WeekSelector */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-          <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#1e1b4b] text-[#e3dfff] mb-3 border border-[#fea619]/30 shadow-2xs">
-              <span className="material-symbols-outlined text-[15px] text-[#fea619]">
+        {/* Hero Welcome Banner */}
+        <div className="glass-panel rounded-3xl p-6 sm:p-8 flex flex-col md:flex-row md:items-center justify-between gap-6 relative overflow-hidden shadow-sm">
+          <div className="absolute right-0 top-0 w-96 h-96 bg-gradient-to-bl from-indigo-500/10 via-amber-500/10 to-transparent rounded-full blur-3xl pointer-events-none" />
+          
+          <div className="relative z-10">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#1e1b4b] text-white mb-3 border border-[#fea619]/40 shadow-sm">
+              <span className="material-symbols-outlined text-[16px] text-[#fea619]" style={{ fontVariationSettings: "'FILL' 1" }}>
                 {profile?.role === "pastor" ? "shield_person" : profile?.role === "leader" ? "admin_panel_settings" : "supervised_user_circle"}
               </span>
-              <span className="font-label-caps font-bold text-[11px] tracking-wider uppercase">
+              <span className="font-label-caps font-extrabold text-[11px] tracking-wider uppercase">
                 {profile?.role === "pastor"
                   ? "Supervision Générale de l'Église"
                   : profile?.role === "leader"
@@ -168,116 +178,136 @@ export default function DashboardPage() {
             <h1 className="font-headline-md font-extrabold text-2xl sm:text-3xl lg:text-4xl text-[#1e1b4b] tracking-tight">
               Shalom, {profile?.first_name} {profile?.last_name} ✨
             </h1>
+            <p className="text-slate-600 text-xs sm:text-sm mt-1.5 font-medium max-w-xl">
+              Votre tableau de bord pastoral pour suivre la progression spirituelle des fidèles, l&apos;assiduité aux cultes et les disciplines quotidiennes.
+            </p>
           </div>
 
-          <WeekSelector selectedDate={selectedDate} onChangeDate={setSelectedDate} />
+          <div className="relative z-10 shrink-0">
+            <WeekSelector selectedDate={selectedDate} onChangeDate={setSelectedDate} />
+          </div>
         </div>
 
-        {/* Quote Block - Sanctuaire Premium Style */}
-        <div className="glass-panel p-6 rounded-2xl border-l-4 border-l-[#fea619] relative overflow-hidden group hover:border-l-[#1e1b4b] transition-all duration-500 shadow-sm">
-          <div className="absolute -right-8 -top-8 text-[#1e1b4b]/5 pointer-events-none group-hover:scale-110 transition-transform duration-700">
-            <span className="material-symbols-outlined text-[120px]">format_quote</span>
+        {/* Quote Block - Luxe Glass */}
+        <div className="glass-panel p-6 sm:p-7 rounded-3xl border-l-4 border-l-[#fea619] relative overflow-hidden group hover:border-l-[#1e1b4b] transition-all duration-500 shadow-xs">
+          <div className="absolute -right-6 -top-6 text-[#1e1b4b]/5 pointer-events-none group-hover:scale-110 group-hover:text-[#1e1b4b]/10 transition-all duration-700">
+            <span className="material-symbols-outlined text-[140px]">format_quote</span>
           </div>
-          <p className="font-sans text-base md:text-lg text-[#191c1e] italic mb-2 relative z-10 leading-relaxed font-medium">
+          <p className="font-sans text-base md:text-lg text-slate-800 italic mb-2.5 relative z-10 leading-relaxed font-semibold">
             &quot;Paissez le troupeau de Dieu qui est sous votre garde, non par contrainte, mais volontairement, selon Dieu.&quot;
           </p>
-          <p className="font-label-caps font-bold text-xs text-[#47464f] relative z-10">— 1 Pierre 5:2</p>
+          <p className="font-label-caps font-extrabold text-xs text-slate-500 relative z-10 flex items-center gap-2">
+            <span className="w-4 h-0.5 bg-[#fea619] inline-block rounded-full" />
+            1 Pierre 5:2
+          </p>
         </div>
 
-        {/* KPI Grid - Sanctuaire Glass Panels */}
+        {/* KPI Grid - 4 Interactive Stat Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
           {/* KPI 1: Total Fidèles */}
-          <div className="glass-panel rounded-2xl p-6 relative overflow-hidden group hover:-translate-y-1 transition-all duration-300">
+          <Link href="/members" className="glass-panel-interactive rounded-3xl p-6 relative overflow-hidden group block">
             <div className="flex justify-between items-start mb-4">
-              <span className="font-label-caps font-bold text-xs uppercase tracking-wider text-[#47464f]">
+              <span className="font-label-caps font-extrabold text-[11px] uppercase tracking-wider text-slate-500">
                 {profile?.role === "shepherd" ? "Mes Âmes (Actives)" : "Total Fidèles Actifs"}
               </span>
-              <div className="w-10 h-10 rounded-xl bg-[#1e1b4b]/10 text-[#1e1b4b] flex items-center justify-center group-hover:scale-110 transition-transform">
-                <span className="material-symbols-outlined text-[20px]">group</span>
+              <div className="w-11 h-11 rounded-2xl bg-indigo-50 border border-indigo-100 text-[#1e1b4b] flex items-center justify-center group-hover:scale-110 group-hover:bg-[#1e1b4b] group-hover:text-white transition-all shadow-2xs">
+                <span className="material-symbols-outlined text-[22px]">group</span>
               </div>
             </div>
-            <div className="flex items-baseline gap-2">
-              <span className="font-stat-mono font-bold text-3xl text-[#1e1b4b]">{stats.totalMembers}</span>
-              <span className="text-xs font-bold text-emerald-700 flex items-center bg-emerald-100/80 px-2 py-0.5 rounded-full">
+            <div className="flex items-baseline gap-2.5">
+              <span className="font-stat-mono font-extrabold text-3xl text-[#1e1b4b] tracking-tight">{stats.totalMembers}</span>
+              <span className="text-xs font-black text-emerald-700 flex items-center gap-1 bg-emerald-50 border border-emerald-200/80 px-2.5 py-0.5 rounded-full">
                 <span className="material-symbols-outlined text-[14px]">trending_up</span> Actifs
               </span>
             </div>
-            <div className="text-[11px] text-[#47464f] font-medium mt-2">Membres non archivés</div>
-          </div>
+            <div className="text-[11px] text-slate-500 font-semibold mt-3 flex items-center justify-between">
+              <span>Membres en suivi</span>
+              <span className="material-symbols-outlined text-[16px] text-slate-400 group-hover:translate-x-1 transition-transform">arrow_forward</span>
+            </div>
+          </Link>
 
           {/* KPI 2: Intégration (4 Semaines) */}
-          <div className="glass-panel rounded-2xl p-6 relative overflow-hidden group hover:-translate-y-1 transition-all duration-300">
+          <Link href="/members" className="glass-panel-interactive rounded-3xl p-6 relative overflow-hidden group block">
             <div className="flex justify-between items-start mb-4">
-              <span className="font-label-caps font-bold text-xs uppercase tracking-wider text-[#47464f]">
+              <span className="font-label-caps font-extrabold text-[11px] uppercase tracking-wider text-slate-500">
                 En Intégration (4 Sem.)
               </span>
-              <div className="w-10 h-10 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center group-hover:scale-110 transition-transform">
-                <span className="material-symbols-outlined text-[20px]">person_add</span>
+              <div className="w-11 h-11 rounded-2xl bg-purple-50 border border-purple-100 text-purple-700 flex items-center justify-center group-hover:scale-110 group-hover:bg-purple-600 group-hover:text-white transition-all shadow-2xs">
+                <span className="material-symbols-outlined text-[22px]">person_add</span>
               </div>
             </div>
-            <div className="flex items-baseline gap-2">
-              <span className="font-stat-mono font-bold text-3xl text-[#1e1b4b]">{stats.newMembers}</span>
-              <span className="text-xs font-bold text-purple-700 bg-purple-100 px-2 py-0.5 rounded-full">Nouveaux</span>
+            <div className="flex items-baseline gap-2.5">
+              <span className="font-stat-mono font-extrabold text-3xl text-purple-950 tracking-tight">{stats.newMembers}</span>
+              <span className="text-xs font-black text-purple-700 bg-purple-50 border border-purple-200/80 px-2.5 py-0.5 rounded-full">Nouveaux</span>
             </div>
-            <div className="text-[11px] text-[#47464f] font-medium mt-2">Suivi initial des âmes</div>
-          </div>
+            <div className="text-[11px] text-slate-500 font-semibold mt-3 flex items-center justify-between">
+              <span>Accueil & enracinement</span>
+              <span className="material-symbols-outlined text-[16px] text-slate-400 group-hover:translate-x-1 transition-transform">arrow_forward</span>
+            </div>
+          </Link>
 
           {/* KPI 3: Absents à relancer */}
-          <div className="glass-panel rounded-2xl p-6 relative overflow-hidden group hover:-translate-y-1 transition-all duration-300 border-l-4 border-l-rose-500">
+          <Link href="/members?status=absent_to_relaunch" className="glass-panel-interactive rounded-3xl p-6 relative overflow-hidden group block border-l-4 border-l-rose-500">
             <div className="flex justify-between items-start mb-4">
-              <span className="font-label-caps font-bold text-xs uppercase tracking-wider text-rose-600">
+              <span className="font-label-caps font-extrabold text-[11px] uppercase tracking-wider text-rose-600">
                 Absents à relancer
               </span>
-              <div className="w-10 h-10 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center group-hover:scale-110 transition-transform">
-                <span className="material-symbols-outlined text-[20px] animate-pulse">notifications_active</span>
+              <div className="w-11 h-11 rounded-2xl bg-rose-50 border border-rose-100 text-rose-600 flex items-center justify-center group-hover:scale-110 group-hover:bg-rose-600 group-hover:text-white transition-all shadow-2xs">
+                <span className="material-symbols-outlined text-[22px] animate-pulse">notifications_active</span>
               </div>
             </div>
-            <div className="flex items-baseline gap-2">
-              <span className="font-stat-mono font-bold text-3xl text-rose-600">{stats.absentToRelaunch}</span>
-              <span className="text-xs font-bold text-rose-700 bg-rose-100 px-2 py-0.5 rounded-full">Alerte !</span>
+            <div className="flex items-baseline gap-2.5">
+              <span className="font-stat-mono font-extrabold text-3xl text-rose-600 tracking-tight">{stats.absentToRelaunch}</span>
+              <span className="text-xs font-black text-rose-700 bg-rose-50 border border-rose-200 px-2.5 py-0.5 rounded-full">
+                Alerte !
+              </span>
             </div>
-            <div className="text-[11px] text-rose-600 font-medium mt-2">Visite ou appel pastoral requis</div>
-          </div>
+            <div className="text-[11px] text-rose-600/90 font-bold mt-3 flex items-center justify-between">
+              <span>Visite/Appel pastoral requis</span>
+              <span className="material-symbols-outlined text-[16px] text-rose-400 group-hover:translate-x-1 transition-transform">arrow_forward</span>
+            </div>
+          </Link>
 
           {/* KPI 4: Role-Specific Actionable Stat */}
-          <div className="glass-panel rounded-2xl p-6 relative overflow-hidden group hover:-translate-y-1 transition-all duration-300">
+          <Link
+            href={profile?.role === "shepherd" ? "/activities" : "/reports"}
+            className="glass-panel-interactive rounded-3xl p-6 relative overflow-hidden group block"
+          >
             <div className="flex justify-between items-start mb-4">
-              <span className="font-label-caps font-bold text-xs uppercase tracking-wider text-[#47464f]">
+              <span className="font-label-caps font-extrabold text-[11px] uppercase tracking-wider text-slate-500">
                 {profile?.role === "shepherd" ? "Discipline Hebdo" : "Rapports & Bergers"}
               </span>
-              <div className="w-10 h-10 rounded-xl bg-[#fea619]/20 text-[#855300] flex items-center justify-center group-hover:scale-110 transition-transform">
-                <span className="material-symbols-outlined text-[20px]">assessment</span>
+              <div className="w-11 h-11 rounded-2xl bg-amber-50 border border-amber-200/60 text-amber-800 flex items-center justify-center group-hover:scale-110 group-hover:bg-[#fea619] group-hover:text-white transition-all shadow-2xs">
+                <span className="material-symbols-outlined text-[22px]">assessment</span>
               </div>
             </div>
-            <div className="flex items-baseline gap-2">
-              <span className="font-stat-mono font-bold text-3xl text-[#1e1b4b]">
-                {profile?.role === "shepherd" ? "En cours" : stats.pendingReports}
+            <div className="flex items-baseline gap-2.5">
+              <span className="font-stat-mono font-extrabold text-2xl text-[#1e1b4b] tracking-tight">
+                {profile?.role === "shepherd" ? "En cours" : `${stats.pendingReports} soumis`}
               </span>
               {profile?.role !== "shepherd" && (
-                <span className="text-xs font-bold text-amber-800 bg-[#fea619]/20 px-2 py-0.5 rounded-full">
+                <span className="text-xs font-black text-amber-900 bg-amber-100/80 border border-amber-300 px-2.5 py-0.5 rounded-full">
                   À valider
                 </span>
               )}
             </div>
-            <div className="text-xs font-bold mt-2">
-              <Link
-                href={profile?.role === "shepherd" ? "/activities" : "/reports"}
-                className="text-[#1e1b4b] hover:text-[#fea619] transition-colors flex items-center gap-1"
-              >
-                <span>{profile?.role === "shepherd" ? "Saisir ma discipline" : "Consulter les rapports"}</span>
-                <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
-              </Link>
+            <div className="text-xs font-bold mt-3 text-[#1e1b4b] group-hover:text-[#312e81] flex items-center justify-between">
+              <span>{profile?.role === "shepherd" ? "Saisir ma discipline" : "Consulter les bilans"}</span>
+              <span className="material-symbols-outlined text-[16px] text-[#fea619] group-hover:translate-x-1 transition-transform">arrow_forward</span>
             </div>
-          </div>
+          </Link>
         </div>
 
         {/* Action Center & Pastoral Advice Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 glass-panel rounded-3xl p-6 sm:p-8 shadow-sm">
+          {/* Actions rapides */}
+          <div className="lg:col-span-2 glass-panel rounded-[32px] p-6 sm:p-8 shadow-sm">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="font-headline-md font-bold text-lg md:text-xl text-[#1e1b4b] flex items-center gap-2.5">
-                <span className="material-symbols-outlined text-[#fea619] text-2xl" style={{ fontVariationSettings: "'FILL' 1" }}>
-                  rocket_launch
+              <h2 className="font-headline-md font-extrabold text-lg sm:text-xl text-[#1e1b4b] flex items-center gap-3 tracking-tight">
+                <span className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-[#1e1b4b] to-[#4338ca] text-white flex items-center justify-center shadow-md shadow-indigo-950/20">
+                  <span className="material-symbols-outlined text-[20px] text-[#fea619]" style={{ fontVariationSettings: "'FILL' 1" }}>
+                    rocket_launch
+                  </span>
                 </span>
                 Actions Rapides & Suivi Pastoral
               </h2>
@@ -286,111 +316,130 @@ export default function DashboardPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Link
                 href="/members"
-                className="p-5 rounded-2xl bg-white/80 border border-[#c8c5d0]/30 hover:border-[#1e1b4b]/40 hover:shadow-md transition-all group flex flex-col justify-between"
+                className="p-5 rounded-2xl bg-white border border-slate-200/80 hover:border-indigo-300 hover:shadow-lg transition-all duration-300 group flex flex-col justify-between"
               >
                 <div className="flex items-center justify-between mb-4">
-                  <div className="w-11 h-11 rounded-xl bg-[#1e1b4b]/10 text-[#1e1b4b] flex items-center justify-center">
-                    <span className="material-symbols-outlined text-[22px]">person_add</span>
+                  <div className="w-12 h-12 rounded-2xl bg-indigo-50 border border-indigo-100 text-[#1e1b4b] flex items-center justify-center group-hover:bg-[#1e1b4b] group-hover:text-white transition-all duration-300 shadow-2xs">
+                    <span className="material-symbols-outlined text-[24px]">person_add</span>
                   </div>
-                  <span className="material-symbols-outlined text-[#47464f] group-hover:translate-x-1 group-hover:text-[#1e1b4b] transition-all">
-                    arrow_forward
-                  </span>
+                  <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-indigo-50 group-hover:text-[#1e1b4b] group-hover:translate-x-1 transition-all">
+                    <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
+                  </div>
                 </div>
                 <div>
-                  <h3 className="font-headline-md font-bold text-[#191c1e] text-base">Ajouter un nouveau fidèle</h3>
-                  <p className="text-xs text-[#47464f] mt-1 font-medium leading-relaxed">
-                    Inscrire une âme et l&apos;assigner à son berger et son groupe.
+                  <h3 className="font-headline-md font-bold text-slate-900 text-base group-hover:text-[#1e1b4b] transition-colors">
+                    Ajouter une nouvelle âme
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-1 font-medium leading-relaxed">
+                    Inscrire un fidèle et l&apos;assigner à son berger et son groupe d&apos;appartenance.
                   </p>
                 </div>
               </Link>
 
               <Link
                 href="/attendance"
-                className="p-5 rounded-2xl bg-white/80 border border-[#c8c5d0]/30 hover:border-[#1e1b4b]/40 hover:shadow-md transition-all group flex flex-col justify-between"
+                className="p-5 rounded-2xl bg-white border border-slate-200/80 hover:border-purple-300 hover:shadow-lg transition-all duration-300 group flex flex-col justify-between"
               >
                 <div className="flex items-center justify-between mb-4">
-                  <div className="w-11 h-11 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center">
-                    <span className="material-symbols-outlined text-[22px]">event_available</span>
+                  <div className="w-12 h-12 rounded-2xl bg-purple-50 border border-purple-100 text-purple-700 flex items-center justify-center group-hover:bg-purple-600 group-hover:text-white transition-all duration-300 shadow-2xs">
+                    <span className="material-symbols-outlined text-[24px]">event_available</span>
                   </div>
-                  <span className="material-symbols-outlined text-[#47464f] group-hover:translate-x-1 group-hover:text-purple-700 transition-all">
-                    arrow_forward
-                  </span>
+                  <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-purple-50 group-hover:text-purple-700 group-hover:translate-x-1 transition-all">
+                    <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
+                  </div>
                 </div>
                 <div>
-                  <h3 className="font-headline-md font-bold text-[#191c1e] text-base">Feuille de présence</h3>
-                  <p className="text-xs text-[#47464f] mt-1 font-medium leading-relaxed">
-                    Cocher les présences par culte (Mardi, Mercredi, Jeudi, Vendredi, Dimanche).
+                  <h3 className="font-headline-md font-bold text-slate-900 text-base group-hover:text-purple-950 transition-colors">
+                    Feuille de présence
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-1 font-medium leading-relaxed">
+                    Cocher les présences aux cultes (Mardi, Mercredi, Jeudi, Vendredi, Dimanche).
                   </p>
                 </div>
               </Link>
 
               <Link
                 href="/activities"
-                className="p-5 rounded-2xl bg-white/80 border border-[#c8c5d0]/30 hover:border-[#1e1b4b]/40 hover:shadow-md transition-all group flex flex-col justify-between"
+                className="p-5 rounded-2xl bg-white border border-slate-200/80 hover:border-emerald-300 hover:shadow-lg transition-all duration-300 group flex flex-col justify-between"
               >
                 <div className="flex items-center justify-between mb-4">
-                  <div className="w-11 h-11 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center">
-                    <span className="material-symbols-outlined text-[22px]">auto_awesome</span>
+                  <div className="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-100 text-emerald-700 flex items-center justify-center group-hover:bg-emerald-600 group-hover:text-white transition-all duration-300 shadow-2xs">
+                    <span className="material-symbols-outlined text-[24px]">auto_awesome</span>
                   </div>
-                  <span className="material-symbols-outlined text-[#47464f] group-hover:translate-x-1 group-hover:text-emerald-700 transition-all">
-                    arrow_forward
-                  </span>
+                  <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-emerald-50 group-hover:text-emerald-700 group-hover:translate-x-1 transition-all">
+                    <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
+                  </div>
                 </div>
                 <div>
-                  <h3 className="font-headline-md font-bold text-[#191c1e] text-base">Discipline spirituelle</h3>
-                  <p className="text-xs text-[#47464f] mt-1 font-medium leading-relaxed">
-                    Suivi quotidien des méditations (0-7), prières (0-7h), et évangélisation.
+                  <h3 className="font-headline-md font-bold text-slate-900 text-base group-hover:text-emerald-950 transition-colors">
+                    Discipline spirituelle
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-1 font-medium leading-relaxed">
+                    Suivi quotidien des méditations (0-7), prières (0-7h), et victoires d&apos;évangélisation.
                   </p>
                 </div>
               </Link>
 
               <Link
                 href="/reports"
-                className="p-5 rounded-2xl bg-white/80 border border-[#c8c5d0]/30 hover:border-[#1e1b4b]/40 hover:shadow-md transition-all group flex flex-col justify-between"
+                className="p-5 rounded-2xl bg-white border border-slate-200/80 hover:border-amber-300 hover:shadow-lg transition-all duration-300 group flex flex-col justify-between"
               >
                 <div className="flex items-center justify-between mb-4">
-                  <div className="w-11 h-11 rounded-xl bg-[#fea619]/20 text-[#855300] flex items-center justify-center">
-                    <span className="material-symbols-outlined text-[22px]">assessment</span>
+                  <div className="w-12 h-12 rounded-2xl bg-amber-50 border border-amber-200/60 text-amber-800 flex items-center justify-center group-hover:bg-[#fea619] group-hover:text-white transition-all duration-300 shadow-2xs">
+                    <span className="material-symbols-outlined text-[24px]">assessment</span>
                   </div>
-                  <span className="material-symbols-outlined text-[#47464f] group-hover:translate-x-1 group-hover:text-[#855300] transition-all">
-                    arrow_forward
-                  </span>
+                  <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-amber-50 group-hover:text-amber-800 group-hover:translate-x-1 transition-all">
+                    <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
+                  </div>
                 </div>
                 <div>
-                  <h3 className="font-headline-md font-bold text-[#191c1e] text-base">Clôture & Rapports</h3>
-                  <p className="text-xs text-[#47464f] mt-1 font-medium leading-relaxed">
-                    Consolider les statistiques hebdomadaires et valider les rapports des bergers.
+                  <h3 className="font-headline-md font-bold text-slate-900 text-base group-hover:text-amber-950 transition-colors">
+                    Clôture & Rapports
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-1 font-medium leading-relaxed">
+                    Consolider les statistiques hebdomadaires et valider les bilans des bergers.
                   </p>
                 </div>
               </Link>
             </div>
           </div>
 
-          {/* Pastoral Advice & Progress Sidebar */}
-          <div className="bg-gradient-to-br from-[#1e1b4b] via-[#1e1b4b] to-[#2e2a6d] rounded-3xl p-6 sm:p-8 flex flex-col justify-between shadow-xl text-white relative overflow-hidden border border-[#fea619]/30">
-            <div className="absolute -right-12 -bottom-12 w-60 h-60 bg-[#fea619]/15 rounded-full blur-3xl pointer-events-none" />
+          {/* Pastoral Advice & Vision Sidebar Card */}
+          <div className="bg-gradient-to-br from-[#1e1b4b] via-[#23205a] to-[#312e81] rounded-[32px] p-6 sm:p-8 flex flex-col justify-between shadow-2xl text-white relative overflow-hidden border border-[#fea619]/40">
+            <div className="absolute -right-16 -bottom-16 w-64 h-64 bg-amber-500/15 rounded-full blur-3xl pointer-events-none animate-pulse" />
             
             <div>
-              <div className="w-12 h-12 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-[#fea619] mb-6 shadow-2xs">
-                <span className="material-symbols-outlined text-2xl" style={{ fontVariationSettings: "'FILL' 1" }}>
-                  church
+              <div className="w-14 h-14 rounded-2xl bg-white/10 backdrop-blur-xl border border-white/20 flex items-center justify-center text-[#fea619] mb-6 shadow-md">
+                <span className="material-symbols-outlined text-[28px]" style={{ fontVariationSettings: "'FILL' 1" }}>
+                  auto_awesome
                 </span>
               </div>
-              <h3 className="font-headline-md font-bold text-lg text-white">Vision Spirituelle</h3>
-              <p className="text-xs text-[#e3dfff]/90 mt-3 leading-relaxed font-medium italic">
-                &quot;Prenez donc garde à vous-mêmes, et à tout le troupeau sur lequel le Saint-Esprit vous a établis évêques, pour paître l&apos;Église du Seigneur, qu&apos;il s&apos;est acquise par son propre sang.&quot;
+              <h3 className="font-headline-md font-extrabold text-xl text-white tracking-tight flex items-center gap-2">
+                Vision Spirituelle
+              </h3>
+              <p className="text-xs text-indigo-100/90 mt-3 leading-relaxed font-medium italic">
+                &quot;Le bon berger donne sa vie pour ses brebis. Veillez sur chaque âme avec amour, patience, assiduité dans la prière et compassion.&quot;
               </p>
-              <div className="text-[11px] font-label-caps font-bold text-[#fea619] mt-3">— Actes 20:28</div>
             </div>
 
-            <div className="mt-8 pt-5 border-t border-white/10">
-              <div className="text-xs text-[#e3dfff] flex items-center justify-between font-label-caps font-bold">
-                <span>Objectif de Prière Hebdo :</span>
-                <span className="font-stat-mono text-[#fea619]">7h / 7h</span>
+            <div className="mt-8 pt-6 border-t border-white/15 space-y-4">
+              <div className="flex items-center justify-between text-xs font-label-caps font-bold">
+                <span className="text-indigo-200">Objectif Prière Hebdo</span>
+                <span className="text-[#fea619] font-stat-mono">7h / 7h</span>
               </div>
-              <div className="w-full bg-white/10 h-2 rounded-full mt-2 overflow-hidden">
-                <div className="bg-gradient-to-r from-[#fea619] to-amber-300 h-full w-4/5 rounded-full" />
+              <div className="w-full bg-white/10 rounded-full h-2.5 overflow-hidden border border-white/10">
+                <div className="bg-gradient-to-r from-[#fea619] to-amber-300 h-full rounded-full transition-all duration-1000" style={{ width: "100%" }} />
               </div>
+
+              <Link
+                href="/profile"
+                className="w-full py-3.5 px-4 rounded-2xl bg-white/15 hover:bg-white/25 border border-white/20 font-label-caps font-bold text-xs text-white transition-all flex items-center justify-center gap-2 cursor-pointer mt-4 group"
+              >
+                <span>Mon profil & Paramètres</span>
+                <span className="material-symbols-outlined text-[16px] group-hover:translate-x-1 transition-transform">
+                  arrow_forward
+                </span>
+              </Link>
             </div>
           </div>
         </div>
