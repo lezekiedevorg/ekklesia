@@ -97,6 +97,7 @@ export default function Navbar({ role = "shepherd", groupName, userName }: Navba
           <div className="flex items-center gap-3 sm:gap-4">
             {(role === "super_admin" || role === "admin") && (
               <>
+                <span className="h-6 w-px bg-slate-200" />
                 <Link
                   href="/admin"
                   title="Accéder au Backoffice Administration"
