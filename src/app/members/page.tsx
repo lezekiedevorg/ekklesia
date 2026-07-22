@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import Navbar from "@/components/layout/Navbar";
 import { useRouter } from "next/navigation";
+import Modal from "@/components/common/Modal";
 
 interface Member {
   id: string;
@@ -770,16 +771,9 @@ export default function MembersPage() {
         )}
 
         {/* Unified Modal (Create & Edit) */}
-        {modalMode !== null && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#1e1b4b]/60 backdrop-blur-md animate-fade-in">
-            <div className="glass-panel border border-white/80 rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl relative max-h-[90vh] overflow-y-auto animate-fade-in-up">
-              <button
-                onClick={() => setModalMode(null)}
-                className="absolute top-6 right-6 w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 flex items-center justify-center transition-colors cursor-pointer"
-              >
-                <span className="material-symbols-outlined text-[18px]">close</span>
-              </button>
-
+        <Modal open={modalMode !== null} onClose={() => setModalMode(null)}>
+          {modalMode !== null && (
+            <div className="space-y-5">
               <div className="flex items-center gap-2.5 mb-2">
                 <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-[#1e1b4b] to-[#4338ca] text-[#fea619] flex items-center justify-center shadow-md">
                   <span className="material-symbols-outlined text-[18px]">
@@ -1049,8 +1043,8 @@ export default function MembersPage() {
                 </div>
               </form>
             </div>
-          </div>
-        )}
+          )}
+        </Modal>
       </main>
     </div>
   );

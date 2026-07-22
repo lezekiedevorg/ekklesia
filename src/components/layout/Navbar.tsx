@@ -96,14 +96,17 @@ export default function Navbar({ role = "shepherd", groupName, userName }: Navba
 
           <div className="flex items-center gap-3 sm:gap-4">
             {(role === "super_admin" || role === "admin") && (
-              <Link
-                href="/admin"
-                title="Accéder au Backoffice Administration"
-                className="px-3.5 py-2 rounded-xl bg-[#1e1b4b] hover:bg-indigo-900 text-[#fea619] text-xs font-bold transition-all flex items-center gap-1.5 shadow-md shadow-[#1e1b4b]/20 border border-[#fea619]/40 hover:scale-[1.02]"
-              >
-                <span className="material-symbols-outlined text-[18px]">admin_panel_settings</span>
-                <span className="hidden sm:inline">Backoffice</span>
-              </Link>
+              <>
+                <Link
+                  href="/admin"
+                  title="Accéder au Backoffice Administration"
+                  className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#1e1b4b] to-[#312e81] text-[#fea619] text-xs font-bold transition-all flex items-center gap-1.5 shadow-lg shadow-[#1e1b4b]/30 border border-[#fea619]/50 hover:ring-1 hover:ring-[#fea619]/20 hover:scale-[1.02]"
+                >
+                  <span className="material-symbols-outlined text-[20px]">admin_panel_settings</span>
+                  <span className="hidden sm:inline">Backoffice</span>
+                </Link>
+                <span className="h-6 w-px bg-slate-200" />
+              </>
             )}
 
             <Link
@@ -139,7 +142,7 @@ export default function Navbar({ role = "shepherd", groupName, userName }: Navba
 
       {/* Mobile Bottom Floating Island Nav - Luxe iOS Sanctuary Style */}
       <nav className="lg:hidden fixed bottom-4 left-4 right-4 z-50 bg-white/95 backdrop-blur-2xl border border-slate-200/90 rounded-3xl shadow-[0_12px_40px_rgba(30,27,75,0.15)] px-2.5 py-2 max-w-lg mx-auto">
-        <div className="grid grid-cols-6 gap-1">
+        <div className={`grid ${(role === "super_admin" || role === "admin") ? "grid-cols-7" : "grid-cols-6"} gap-1`}>
           {navItems.map((item) => {
             const isActive = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href));
             return (
@@ -172,6 +175,21 @@ export default function Navbar({ role = "shepherd", groupName, userName }: Navba
               </Link>
             );
           })}
+          {(role === "super_admin" || role === "admin") && (
+            <Link
+              href="/admin"
+              className="flex flex-col items-center justify-center py-1 px-1 rounded-2xl transition-all duration-300 text-slate-500 hover:text-slate-900 border-l border-slate-200/80 ml-1"
+            >
+              <div className="p-1.5 rounded-xl transition-all duration-300 flex items-center justify-center hover:bg-slate-100 text-[#fea619]">
+                <span className="material-symbols-outlined text-[20px]">
+                  admin_panel_settings
+                </span>
+              </div>
+              <span className="text-xs font-label-caps mt-1 truncate w-full text-center font-semibold text-slate-500">
+                Admin
+              </span>
+            </Link>
+          )}
         </div>
       </nav>
     </>

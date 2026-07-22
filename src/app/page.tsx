@@ -157,7 +157,7 @@ export default function DashboardPage() {
         userName={profile ? `${profile.first_name} ${profile.last_name}` : undefined}
       />
 
-      <main className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 space-y-8 animate-fade-in-up">
+      <main className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 space-y-8 animate-fade-in-up page-transition">
         {/* Hero Welcome Banner */}
         <div className="glass-panel rounded-3xl p-6 sm:p-8 flex flex-col md:flex-row md:items-center justify-between gap-6 relative overflow-hidden shadow-sm">
           <div className="absolute right-0 top-0 w-96 h-96 bg-gradient-to-bl from-indigo-500/10 via-amber-500/10 to-transparent rounded-full blur-3xl pointer-events-none" />

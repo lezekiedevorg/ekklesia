@@ -384,6 +384,11 @@ export default function ReportsPage() {
   // Group filter for Pastor
   const [groupFilter, setGroupFilter] = useState<string>("all");
   const [groupsList, setGroupsList] = useState<{ id: string; name: string }[]>([]);
+  const [expandedReportId, setExpandedReportId] = useState<string | null>(null);
+
+  const toggleReport = (id: string) => {
+    setExpandedReportId((prev) => (prev === id ? null : id));
+  };
 
   // Shepherd live preview calculation state
   const [previewData, setPreviewData] = useState<WeeklyReport["content"] | null>(null);
@@ -972,8 +977,14 @@ export default function ReportsPage() {
                   key={report.id}
                   className="glass-panel-interactive rounded-3xl p-6 sm:p-8 border border-white/80 shadow-md space-y-6 relative overflow-hidden transition-all"
                 >
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200/60 pb-5">
-                    <div>
+                  <div 
+                    className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200/60 pb-5 cursor-pointer"
+                    onClick={() => toggleReport(report.id)}
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className={`material-symbols-outlined text-slate-400 transition-transform duration-300 ${expandedReportId === report.id ? 'rotate-90' : ''}`}>
+                        chevron_right
+                      </span>
                       <div className="flex items-center gap-3 flex-wrap">
                         <h3 className="text-lg sm:text-xl font-headline-md font-extrabold text-[#1e1b4b]">
                           {report.profiles ? `${report.profiles.first_name} ${report.profiles.last_name}` : "Berger"}
@@ -1031,7 +1042,10 @@ export default function ReportsPage() {
 
                   {/* Report Content Details */}
                   {report.content && (
-                    <div className="space-y-5">
+                    <div className={`transition-all duration-300 overflow-hidden ${
+                      expandedReportId === report.id ? 'max-h-[3000px] opacity-100 mt-4' : 'max-h-0 opacity-0'
+                    }`}>
+                      <div className="space-y-5">
                       {report.content.programs_summary && report.content.programs_summary.length > 0 && (
                         <div className="bg-white/50 backdrop-blur-md p-5 sm:p-6 rounded-2xl border border-white/80 shadow-2xs">
                           <div className="text-xs font-label-caps font-extrabold text-[#1e1b4b] uppercase tracking-wider mb-3 flex items-center gap-2">
