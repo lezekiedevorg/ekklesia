@@ -70,7 +70,7 @@ export default function AdminSidebar() {
                     ADMIN
                   </span>
                 </h1>
-                <p className="text-[11px] text-[#9D9AD0] font-medium leading-tight">Centre de Commande</p>
+                <p className="text-xs text-[#9D9AD0] font-medium leading-tight">Centre de Commande</p>
               </div>
             )}
           </div>
@@ -88,7 +88,7 @@ export default function AdminSidebar() {
         {/* Navigation Items */}
         <nav className="p-3 space-y-1.5">
           {!collapsed && (
-            <div className="text-[10px] font-black uppercase tracking-wider text-[#9D9AD0]/60 px-3 py-2">
+            <div className="text-xs font-black uppercase tracking-wider text-[#9D9AD0]/60 px-3 py-2">
               ADMINISTRATION CENTRALE
             </div>
           )}
@@ -120,7 +120,7 @@ export default function AdminSidebar() {
                     <span className="text-sm tracking-tight truncate">{item.name}</span>
                     {item.badge && (
                       <span
-                        className="text-[10px] font-extrabold px-2 py-0.5 rounded-full text-white shrink-0"
+                        className="text-xs font-extrabold px-2 py-0.5 rounded-full text-white shrink-0"
                         style={{ background: item.badgeBg }}
                       >
                         {item.badge}
@@ -143,7 +143,7 @@ export default function AdminSidebar() {
             </div>
             <div className="min-w-0">
               <div className="text-xs font-black text-white truncate">Mode Backoffice</div>
-              <div className="text-[10px] text-[#9D9AD0] font-medium truncate">Zéro inscription libre</div>
+              <div className="text-xs text-[#9D9AD0] font-medium truncate">Zéro inscription libre</div>
             </div>
           </div>
         )}

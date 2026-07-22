@@ -28,14 +28,17 @@
   --color-outline: #94a3b8;
   --color-outline-variant: #cbd5e1;
 
-  --font-sans: var(--font-inter), "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
-  --font-headline-md: "Outfit", sans-serif;
-  --font-display-lg: "Outfit", sans-serif;
-  --font-stat-mono: "JetBrains Mono", monospace;
-  --font-label-caps: "Plus Jakarta Sans", sans-serif;
+  --default-font-family: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
+  --font-sans: 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, sans-serif;
+  --font-headline-md: 'Outfit', 'Plus Jakarta Sans', sans-serif;
+  --font-display-lg: 'Outfit', 'Plus Jakarta Sans', sans-serif;
+  --font-stat-mono: 'JetBrains Mono', monospace;
+  --font-label-caps: 'Plus Jakarta Sans', 'Inter', sans-serif;
 }
 
 body {
+  font-size: 15px;
+  line-height: 1.6;
   background-color: #fafaf9;
   background-image: radial-gradient(at 50% 0%, rgba(238, 242, 255, 0.7) 0px, transparent 75%),
                     radial-gradient(at 100% 100%, rgba(254, 243, 199, 0.3) 0px, transparent 50%);

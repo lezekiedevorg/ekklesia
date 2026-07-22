@@ -55,12 +55,12 @@ export default function Navbar({ role = "shepherd", groupName, userName }: Navba
                 <div className="font-headline-md font-extrabold text-lg text-[#1e1b4b] flex items-center gap-2.5 tracking-tight">
                   Sanctuaire
                   {groupName && role !== "pastor" && role !== "super_admin" && role !== "admin" && (
-                    <span className="text-[10px] font-label-caps font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-300/60 shadow-2xs">
+                    <span className="text-xs font-label-caps font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-300/60 shadow-2xs">
                       Groupe {groupName}
                     </span>
                   )}
                 </div>
-                <div className="text-[11px] font-label-caps font-semibold text-slate-500 flex items-center gap-1.5">
+                <div className="text-xs font-label-caps font-semibold text-slate-500 flex items-center gap-1.5">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse inline-block" />
                   {roleLabel}
                 </div>
@@ -128,7 +128,7 @@ export default function Navbar({ role = "shepherd", groupName, userName }: Navba
                 <span className="max-w-[130px] truncate font-label-caps font-bold text-xs text-slate-900 group-hover:text-indigo-950 transition-colors">
                   {userName || "Mon Profil"}
                 </span>
-                <span className="text-[10px] text-slate-500 font-semibold capitalize flex items-center gap-1">
+                <span className="text-xs text-slate-500 font-semibold capitalize flex items-center gap-1">
                   {role === "super_admin" ? "Super Admin" : role === "admin" ? "Admin" : role === "pastor" ? "Pasteur" : role === "leader" ? "Leader" : "Berger"}
                 </span>
               </div>
@@ -166,7 +166,7 @@ export default function Navbar({ role = "shepherd", groupName, userName }: Navba
                     {item.icon}
                   </span>
                 </div>
-                <span className={`text-[10px] font-label-caps mt-1 truncate w-full text-center ${isActive ? "font-bold text-[#1e1b4b]" : "font-semibold text-slate-500"}`}>
+                <span className={`text-xs font-label-caps mt-1 truncate w-full text-center ${isActive ? "font-bold text-[#1e1b4b]" : "font-semibold text-slate-500"}`}>
                   {item.name}
                 </span>
               </Link>

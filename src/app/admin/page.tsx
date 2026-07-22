@@ -33,7 +33,7 @@ export default async function AdminDashboardPage() {
       {/* Top Banner / Eyebrow Header */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 bg-white p-6 md:p-8 rounded-3xl border border-[#EDEBE4] shadow-[0_4px_24px_rgba(30,27,75,0.03)]">
         <div className="space-y-2">
-          <div className="text-[11px] font-extrabold uppercase tracking-widest text-[#E8912F] flex items-center gap-2">
+          <div className="text-xs font-extrabold uppercase tracking-widest text-[#E8912F] flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-[#E8912F]"></span>
             <span>VUE ADMINISTRATIVE · CENTRE DE COMMANDE</span>
           </div>
@@ -79,7 +79,7 @@ export default async function AdminDashboardPage() {
           </div>
           <div>
             <div className="text-3xl font-black text-[#1E1B4B] tracking-tight">{totalUsers}</div>
-            <div className="text-xs font-bold text-[#8B8A96] uppercase tracking-wider mt-1">Comptes Pastoraux</div>
+            <div className="text-sm font-bold text-[#8B8A96] uppercase tracking-wider mt-1">Comptes Pastoraux</div>
           </div>
         </div>
 
@@ -95,7 +95,7 @@ export default async function AdminDashboardPage() {
           </div>
           <div>
             <div className="text-3xl font-black text-[#1E1B4B] tracking-tight">{totalRoles}</div>
-            <div className="text-xs font-bold text-[#8B8A96] uppercase tracking-wider mt-1">Rôles Configurés</div>
+            <div className="text-sm font-bold text-[#8B8A96] uppercase tracking-wider mt-1">Rôles Configurés</div>
           </div>
         </div>
 
@@ -111,7 +111,7 @@ export default async function AdminDashboardPage() {
           </div>
           <div>
             <div className="text-3xl font-black text-[#1E1B4B] tracking-tight">{totalSettings}</div>
-            <div className="text-xs font-bold text-[#8B8A96] uppercase tracking-wider mt-1">Paramètres JSONB</div>
+            <div className="text-sm font-bold text-[#8B8A96] uppercase tracking-wider mt-1">Paramètres JSONB</div>
           </div>
         </div>
 
@@ -127,7 +127,7 @@ export default async function AdminDashboardPage() {
           </div>
           <div>
             <div className="text-3xl font-black text-[#2E9E6B] tracking-tight">Actif</div>
-            <div className="text-xs font-bold text-[#8B8A96] uppercase tracking-wider mt-1">Audit En Temps Réel</div>
+            <div className="text-sm font-bold text-[#8B8A96] uppercase tracking-wider mt-1">Audit En Temps Réel</div>
           </div>
         </div>
       </div>
@@ -155,7 +155,7 @@ export default async function AdminDashboardPage() {
                 <div key={role.code} className="space-y-1.5">
                   <div className="flex items-center justify-between text-xs font-bold">
                     <span className="text-[#1E1B4B]">{role.label}</span>
-                    <span className="font-black px-2 py-0.5 rounded-full text-[11px]" style={{ background: role.bg, color: role.color }}>
+                    <span className="font-black px-2 py-0.5 rounded-full text-xs" style={{ background: role.bg, color: role.color }}>
                       {count} ({pct}%)
                     </span>
                   </div>
@@ -226,7 +226,7 @@ export default async function AdminDashboardPage() {
                         </div>
                         <div className="min-w-0">
                           <div className="text-xs font-black text-[#1E1B4B] truncate">{log.action}</div>
-                          <div className="text-[11px] text-[#8B8A96] font-medium truncate mt-0.5">
+                          <div className="text-xs text-[#8B8A96] font-medium truncate mt-0.5">
                             Ressource: <span className="font-bold text-[#4A47B8]">{log.resource_type || 'Général'}</span> ({log.resource_id || 'N/A'})
                           </div>
                         </div>
@@ -235,7 +235,7 @@ export default async function AdminDashboardPage() {
                         <div className="text-xs font-extrabold text-[#1E1B4B]">
                           {new Date(log.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
                         </div>
-                        <div className="text-[10px] text-[#8B8A96] font-medium">
+                        <div className="text-xs text-[#8B8A96] font-medium">
                           {new Date(log.created_at).toLocaleDateString('fr-FR')}
                         </div>
                       </div>

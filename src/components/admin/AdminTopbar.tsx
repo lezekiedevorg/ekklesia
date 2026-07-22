@@ -123,7 +123,7 @@ export default function AdminTopbar({ userContext }: AdminTopbarProps) {
               <span className="material-symbols-outlined text-sm font-bold">{currentSpace.icon}</span>
             </div>
             <div className="hidden md:block">
-              <div className="text-[10px] uppercase font-black tracking-wider text-[#8B8A96]">Espace Actif</div>
+              <div className="text-xs uppercase font-black tracking-wider text-[#8B8A96]">Espace Actif</div>
               <div className="text-xs font-black text-[#1E1B4B] leading-tight flex items-center gap-1">
                 <span>{currentSpace.name}</span>
                 <span className="material-symbols-outlined text-sm text-[#8B8A96]">expand_more</span>
@@ -142,7 +142,7 @@ export default function AdminTopbar({ userContext }: AdminTopbarProps) {
                 <div className="flex items-center justify-between pb-3 mb-2 border-b border-[#EDEBE4]">
                   <div>
                     <div className="text-xs font-black text-[#1E1B4B]">BASCULER D&apos;ESPACE (RBAC)</div>
-                    <div className="text-[11px] text-[#8B8A96]">Prévisualisez ou naviguez dans le système</div>
+                    <div className="text-xs text-[#8B8A96]">Prévisualisez ou naviguez dans le système</div>
                   </div>
                   <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-[#EEEEFA] text-[#4A47B8]">
                     {spaces.length} rôles
@@ -175,13 +175,13 @@ export default function AdminTopbar({ userContext }: AdminTopbarProps) {
                           <div className="flex items-center justify-between">
                             <span className="text-xs font-black text-[#1E1B4B] truncate">{s.name}</span>
                             {active && (
-                              <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-[#4A47B8] text-white">
+                              <span className="text-xs font-extrabold px-2 py-0.5 rounded-full bg-[#4A47B8] text-white">
                                 Actif
                               </span>
                             )}
                           </div>
-                          <div className="text-[11px] font-bold text-[#8B8A96]">{s.short}</div>
-                          <div className="text-[10px] text-[#6E6D79] mt-1 line-clamp-2 leading-relaxed">
+                          <div className="text-xs font-bold text-[#8B8A96]">{s.short}</div>
+                          <div className="text-xs text-[#6E6D79] mt-1 line-clamp-2 leading-relaxed">
                             {s.desc}
                           </div>
                         </div>
@@ -212,7 +212,7 @@ export default function AdminTopbar({ userContext }: AdminTopbarProps) {
           </div>
           <div className="hidden lg:block text-left">
             <div className="text-xs font-black text-[#1E1B4B] leading-tight">{fullName}</div>
-            <div className="text-[11px] font-bold text-[#E8912F]">{userContext.roles[0] || 'Super Admin'}</div>
+            <div className="text-xs font-bold text-[#E8912F]">{userContext.roles[0] || 'Super Admin'}</div>
           </div>
         </div>
       </div>
