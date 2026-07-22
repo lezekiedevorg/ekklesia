@@ -26,12 +26,14 @@ interface ProgramSummaryItem {
 }
 
 interface WeeklyReport {
+  [key: string]: any;
   id: string;
   shepherd_id: string;
   group_id: string;
   report_date: string;
   week_end_date?: string;
   report_data?: any;
+  summary_data?: any;
   status: "submitted" | "approved" | "rejected";
   content: {
     total_members: number;
@@ -40,6 +42,7 @@ interface WeeklyReport {
     absentees_with_reasons: { name: string; reason: string }[];
     new_members_progression: { name: string; count: number }[];
     discipline: {
+      [key: string]: any;
       daily_prayer_done?: boolean;
       daily_meditation_done?: boolean;
       meditated_book?: string | null;
@@ -59,6 +62,11 @@ interface WeeklyReport {
       meditation_chapter_end?: string | null;
       evangelism_q_done?: boolean;
       evangelism_i_done?: boolean;
+      mentoring_done?: boolean;
+      mentoring_theme?: string | null;
+      visits_done?: boolean;
+      phone_calls_done?: boolean;
+      phone_calls_count?: number;
       pastoral_souls_won?: number;
       pastoral_new_contacts?: number;
       pastoral_first_timers?: number;

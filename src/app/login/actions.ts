@@ -3,7 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 
-export async function loginAction(formData: FormData) {
+export async function loginAction(formData: FormData): Promise<{ error?: string; success?: boolean; message?: string }> {
   const email = formData.get('email') as string
   const password = formData.get('password') as string
   const isSignUp = formData.get('isSignUp') === 'true'
@@ -18,18 +18,7 @@ export async function loginAction(formData: FormData) {
   const supabase = await createClient()
 
   if (isSignUp) {
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/auth/callback`,
-      },
-    })
-    if (error) {
-      console.error(`[loginAction] Erreur signUp:`, error.message);
-      return { error: error.message }
-    }
-    return { message: "Veuillez vérifier votre boîte email pour confirmer votre compte." }
+    return { error: "L'inscription publique est désactivée. Seul un administrateur peut vous attribuer des identifiants." }
   } else {
     console.log(`[loginAction] Appel de signInWithPassword...`);
     const start = Date.now();

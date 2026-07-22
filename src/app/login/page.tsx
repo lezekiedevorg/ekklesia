@@ -137,16 +137,11 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <div className="mt-6 text-center">
-          <button
-            type="button"
-            onClick={() => setIsSignUp(!isSignUp)}
-            className="text-xs font-bold text-slate-500 hover:text-indigo-600 transition-colors duration-200"
-          >
-            {isSignUp
-              ? "Vous avez déjà un compte ? Connectez-vous ici"
-              : "Première visite ? Créez votre profil berger/responsable"}
-          </button>
+        <div className="mt-6 text-center border-t border-slate-100 pt-5">
+          <p className="text-xs font-semibold text-slate-500 leading-relaxed">
+            🛡️ L&apos;accès est géré par l&apos;administration de l&apos;église.<br/>
+            Contactez un administrateur pour obtenir vos accès ou modifier votre rôle.
+          </p>
         </div>
       </div>
     </div>

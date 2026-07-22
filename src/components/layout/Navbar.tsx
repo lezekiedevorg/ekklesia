@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 interface NavbarProps {
-  role?: "pastor" | "leader" | "shepherd";
+  role?: "super_admin" | "admin" | "pastor" | "leader" | "shepherd" | string;
   groupName?: string | null;
   userName?: string;
 }
@@ -34,14 +34,14 @@ export default function Navbar({ role = "shepherd", groupName, userName }: Navba
               <div>
                 <div className="font-headline-md font-bold text-lg text-[#1e1b4b] flex items-center gap-2.5 tracking-tight">
                   Sanctuaire
-                  {groupName && role !== "pastor" && (
+                  {groupName && role !== "pastor" && role !== "super_admin" && role !== "admin" && (
                     <span className="text-[10px] font-label-caps font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-[#fea619]/15 text-[#855300] border border-[#fea619]/30 shadow-2xs">
                       Groupe {groupName}
                     </span>
                   )}
                 </div>
                 <div className="text-[11px] font-label-caps font-medium text-[#47464f]">
-                  {role === "pastor" ? "Supervision Générale (Pasteur)" : role === "leader" ? "Supervision Leader" : "Suivi Pastoral (Berger)"}
+                  {role === "super_admin" ? "Super Administrateur" : role === "admin" ? "Administrateur" : role === "pastor" ? "Supervision Générale (Pasteur)" : role === "leader" ? "Supervision Leader" : "Suivi Pastoral (Berger)"}
                 </div>
               </div>
             </Link>
@@ -74,6 +74,17 @@ export default function Navbar({ role = "shepherd", groupName, userName }: Navba
           </div>
 
           <div className="flex items-center gap-4">
+            {(role === "super_admin" || role === "admin") && (
+              <Link
+                href="/admin"
+                title="Accéder au Backoffice Administration"
+                className="px-3.5 py-2 rounded-xl bg-[#1e1b4b] hover:bg-indigo-900 text-[#fea619] text-xs font-bold transition-all flex items-center gap-1.5 shadow-md shadow-[#1e1b4b]/20 border border-[#fea619]/40 hover:scale-[1.02]"
+              >
+                <span className="material-symbols-outlined text-[18px]">admin_panel_settings</span>
+                <span className="hidden sm:inline">Backoffice</span>
+              </Link>
+            )}
+
             <button
               title="Notifications & Alertes"
               className="w-10 h-10 rounded-xl bg-white border border-[#c8c5d0]/30 flex items-center justify-center text-[#47464f] hover:text-[#fea619] hover:border-[#fea619]/40 transition-colors relative shadow-2xs"
