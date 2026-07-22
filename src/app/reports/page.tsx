@@ -947,7 +947,7 @@ export default function ReportsPage() {
                 <span className="text-base not-italic">📜</span>
                 <div>
                   <span className="font-bold not-italic block text-[#fea619] mb-0.5 uppercase text-[11px]">Attestation sur l'honneur :</span>
-                  "Je soussigné, berger <span className="font-black text-white not-italic">{profile?.first_name} {profile?.last_name}</span>, atteste en toute conscience et devant le Seigneur que l'ensemble des informations mentionnées ci-dessus sont exactes, sincères et conformes à la vérité."
+                  &quot;Je soussigné, berger <span className="font-black text-white not-italic">{profile?.first_name} {profile?.last_name}</span>, atteste en toute conscience et devant le Seigneur que l'ensemble des informations mentionnées ci-dessus sont exactes, sincères et conformes à la vérité.&quot;
                 </div>
               </div>
             </div>
@@ -1144,7 +1144,7 @@ export default function ReportsPage() {
                           <span className="text-base not-italic">📜</span>
                           <div>
                             <span className="font-label-caps font-extrabold not-italic block text-[#1e1b4b] mb-1 uppercase text-[11px] tracking-wider">Attestation sur l'honneur du berger :</span>
-                            "Je soussigné, berger <span className="font-extrabold text-[#1e1b4b] not-italic">{report.profiles?.first_name} {report.profiles?.last_name}</span>, atteste en toute conscience et devant le Seigneur que l'ensemble des informations mentionnées dans ce rapport hebdomadaire sont exactes, sincères et conformes à la vérité."
+                            &quot;Je soussigné, berger <span className="font-extrabold text-[#1e1b4b] not-italic">{report.profiles?.first_name} {report.profiles?.last_name}</span>, atteste en toute conscience et devant le Seigneur que l'ensemble des informations mentionnées dans ce rapport hebdomadaire sont exactes, sincères et conformes à la vérité.&quot;
                           </div>
                         </div>
                       </div>
