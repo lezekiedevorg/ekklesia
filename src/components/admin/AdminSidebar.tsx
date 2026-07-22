@@ -64,9 +64,9 @@ export default function AdminSidebar() {
             </div>
             {!collapsed && (
               <div>
-                <h1 className="font-black text-base tracking-tight text-white flex items-center gap-2">
+                <h1 className="font-extrabold text-base tracking-tight text-white flex items-center gap-2">
                   Ekklesia
-                  <span className="text-[9px] uppercase font-black tracking-wider px-1.5 py-0.5 rounded-md bg-[#4A47B8] text-indigo-100 border border-indigo-400/30">
+                  <span className="text-[10px] uppercase font-extrabold tracking-widest px-2 py-0.5 rounded-md bg-[#4A47B8] text-indigo-100 border border-indigo-400/30">
                     ADMIN
                   </span>
                 </h1>
@@ -88,8 +88,8 @@ export default function AdminSidebar() {
         {/* Navigation Items */}
         <nav className="p-3 space-y-1.5">
           {!collapsed && (
-            <div className="text-xs font-black uppercase tracking-wider text-[#9D9AD0]/60 px-3 py-2">
-              ADMINISTRATION CENTRALE
+            <div className="text-xs font-bold uppercase tracking-widest text-[#9D9AD0]/50 px-3 py-2">
+              Administration Centrale
             </div>
           )}
           {navItems.map((item) => {
@@ -120,7 +120,7 @@ export default function AdminSidebar() {
                     <span className="text-sm tracking-tight truncate">{item.name}</span>
                     {item.badge && (
                       <span
-                        className="text-xs font-extrabold px-2 py-0.5 rounded-full text-white shrink-0"
+                        className="text-[10px] font-bold px-2 py-0.5 rounded-full text-white shrink-0 tracking-wide"
                         style={{ background: item.badgeBg }}
                       >
                         {item.badge}
@@ -142,8 +142,8 @@ export default function AdminSidebar() {
               👑
             </div>
             <div className="min-w-0">
-              <div className="text-xs font-black text-white truncate">Mode Backoffice</div>
-              <div className="text-xs text-[#9D9AD0] font-medium truncate">Zéro inscription libre</div>
+              <div className="text-xs font-bold text-white truncate">Mode Backoffice</div>
+              <div className="text-xs text-[#9D9AD0]/70 font-medium truncate">Zéro inscription libre</div>
             </div>
           </div>
         )}

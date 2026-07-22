@@ -27,7 +27,7 @@ export default function RootLayout({
   return (
     <html
       lang="fr"
-      className="font-sans font-['Plus_Jakarta_Sans'] h-full antialiased bg-[#f7f9fb] text-[#191c1e]"
+      className="font-sans font-['Plus_Jakarta_Sans'] h-full antialiased"
     >
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
