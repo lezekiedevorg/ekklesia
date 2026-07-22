@@ -1,11 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Inter } from "next/font/google";
 import "./globals.css";
-
-const inter = Inter({
-  subsets: ["latin"],
-  variable: "--font-inter",
-});
 
 export const metadata: Metadata = {
   title: "Gestion Église - Suivi des Bergers et Âmes",
@@ -33,7 +27,7 @@ export default function RootLayout({
   return (
     <html
       lang="fr"
-      className={`${inter.variable} font-sans h-full antialiased bg-[#f7f9fb] text-[#191c1e]`}
+      className="font-sans h-full antialiased bg-[#f7f9fb] text-[#191c1e]"
     >
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -43,7 +37,7 @@ export default function RootLayout({
           rel="stylesheet"
         />
         <link
-          href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
           rel="stylesheet"
         />
       </head>

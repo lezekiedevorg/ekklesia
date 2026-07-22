@@ -37,6 +37,7 @@ interface WeeklyReport {
   summary_data?: any;
   status: "submitted" | "approved" | "rejected";
   content: {
+    [key: string]: any;
     total_members: number;
     sunday_present_count: number;
     attendance_ratio_pct: number;
@@ -89,16 +90,12 @@ interface WeeklyReport {
       monthly_in_person_done?: boolean;
       monthly_department_done?: boolean;
       monthly_offering_done?: boolean;
-      [key: string]: any;
     } | null;
     programs_summary?: ProgramSummaryItem[];
     summary_data?: ProgramSummaryItem[];
-    [key: string]: any;
   };
   profiles?: { first_name: string; last_name: string };
   groups?: { name: string };
-  summary_data?: ProgramSummaryItem[];
-  [key: string]: any;
 }
 
 function DisciplineReportDetails({
