@@ -11,7 +11,8 @@ export async function getUsersAction() {
     await assertPermission('users:view');
     const supabase = await createClient();
 
-    // Fetch profiles along with their group name and user roles
+    // Fetch profiles + group name. app_user_roles is fetched separately because
+    // it FKs to auth.users (not profiles), so PostgREST cannot embed it here.
     const { data: profiles, error } = await supabase
       .from('profiles')
       .select(`
@@ -22,8 +23,7 @@ export async function getUsersAction() {
         role,
         group_id,
         created_at,
-        groups (name),
-        app_user_roles (role_code)
+        groups!profiles_group_id_fkey (name)
       `)
       .order('created_at', { ascending: false });
 
@@ -31,7 +31,21 @@ export async function getUsersAction() {
       return { error: error.message };
     }
 
-    return { success: true, users: profiles };
+    const { data: userRoles } = await supabase
+      .from('app_user_roles')
+      .select('user_id, role_code');
+
+    const rolesByUser: Record<string, { role_code: string }[]> = {};
+    (userRoles || []).forEach((ur: any) => {
+      (rolesByUser[ur.user_id] ||= []).push({ role_code: ur.role_code });
+    });
+
+    const users = (profiles || []).map((p: any) => ({
+      ...p,
+      app_user_roles: rolesByUser[p.id] || [],
+    }));
+
+    return { success: true, users };
   } catch (err: any) {
     return { error: err.message || 'Erreur lors de la récupération des utilisateurs.' };
   }

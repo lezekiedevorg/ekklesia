@@ -1,4 +1,4 @@
-export type UserRole = "shepherd" | "leader" | "pastor";
+export type UserRole = "shepherd" | "leader" | "pastor" | "admin" | "super_admin";
 
 export interface Profile {
   id: string;
@@ -36,6 +36,7 @@ export interface Member {
   invited_by_member_id?: string | null;
   created_at: string;
   archived_at?: string | null;
+  residence_location?: string | null;
 }
 
 export interface Attendance {
@@ -165,4 +166,42 @@ export interface WeeklyReport {
   };
   summary_data?: ProgramSummaryItem[];
   [key: string]: any;
+}
+
+export interface Department {
+  id: string;
+  name: string;
+  description?: string | null;
+  leader_id?: string | null;
+  icon?: string;
+  is_active?: boolean;
+  created_at: string;
+  leader?: Profile;
+  member_count?: number;
+}
+
+export interface MemberDepartment {
+  member_id: string;
+  department_id: string;
+  role: "member" | "leader" | "responsible";
+  joined_at: string;
+  member?: Member;
+  department?: Department;
+}
+
+export interface NewcomerRegistration {
+  id: string;
+  member_id: string;
+  registered_by?: string | null;
+  registration_date: string;
+  invited_by_member_id?: string | null;
+  residence_location?: string | null;
+  is_self_initiated?: boolean;
+  assigned_shepherd_id?: string | null;
+  notes?: string | null;
+  created_at: string;
+  member?: Member;
+  registered_by_profile?: Profile;
+  invited_by?: Member;
+  assigned_shepherd?: Profile;
 }

@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import PageLoader from "@/components/common/PageLoader";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import Navbar from "@/components/layout/Navbar";
 
 interface Profile {
   id: string;
@@ -99,6 +99,7 @@ export default function ProfilePage() {
       setMessage("Profil enregistré avec succès ! Redirection vers le Tableau de bord...");
       setTimeout(() => {
         router.push("/");
+        router.refresh(); // recharge le nom affiché dans la navbar (layout serveur)
       }, 1000);
     } catch (err: unknown) {
       if (err instanceof Error) {
@@ -117,19 +118,11 @@ export default function ProfilePage() {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-[#f8fafc] to-[#f1f5f9] flex items-center justify-center text-[#1e1b4b] font-sans">
-        <div className="glass-panel px-8 py-6 rounded-3xl shadow-xl flex items-center gap-4 border border-white/80 font-bold text-sm">
-          <div className="w-6 h-6 rounded-full border-3 border-[#1e1b4b] border-t-transparent animate-spin" />
-          <span>Chargement de votre profil spirituel...</span>
-        </div>
-      </div>
-    );
+    return <PageLoader label="Chargement de votre profil spirituel..." />;
   }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-[#f8fafc] to-[#f1f5f9] text-[#1e1b4b] pb-24 font-sans selection:bg-[#fea619]/20">
-      <Navbar role={profile?.role || "shepherd"} userName={profile ? `${profile.first_name} ${profile.last_name}` : undefined} />
 
       <main className="max-w-2xl mx-auto p-4 sm:p-6 mt-4 animate-fade-in-up">
         <div className="glass-panel rounded-3xl p-6 sm:p-8 shadow-md border border-white/80 relative overflow-hidden">

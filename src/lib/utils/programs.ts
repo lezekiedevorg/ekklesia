@@ -1,22 +1,25 @@
 import { Member, Attendance, ProgramSummaryItem } from "@/types/db";
-import { PROGRAM_DEFINITIONS } from "@/lib/constants/programs";
+import { PROGRAM_DEFINITIONS, ProgramDefinition } from "@/lib/constants/programs";
 
 /**
- * Computes attendance summary across all 5 programs for a set of members.
- * Strictly uses member.current_class to determine eligibility for Tuesday and Wednesday classes.
+ * Computes attendance summary across the given programs for a set of members.
+ * Eligibility for class-type programs is driven by `program.eligibility_class`
+ * matched against `member.current_class`.
+ *
+ * `programs` defaults to the static fallback list; pass the DB-loaded list
+ * (from getProgramsClient/getProgramsServer) for the configurable set.
  */
 export function computeProgramsSummary(
   members: Member[],
-  attendanceRecords: Attendance[]
+  attendanceRecords: Attendance[],
+  programs: ProgramDefinition[] = PROGRAM_DEFINITIONS
 ): ProgramSummaryItem[] {
   const activeMembers = members.filter((m) => !m.archived_at && m.status !== "archived");
 
-  return PROGRAM_DEFINITIONS.map((prog) => {
+  return programs.map((prog) => {
     let eligibleMembers = activeMembers;
-    if (prog.id === "tuesday_class") {
-      eligibleMembers = activeMembers.filter((m) => m.current_class === "tuesday_class");
-    } else if (prog.id === "wednesday_class") {
-      eligibleMembers = activeMembers.filter((m) => m.current_class === "wednesday_class");
+    if (prog.eligibility_class) {
+      eligibleMembers = activeMembers.filter((m) => m.current_class === prog.eligibility_class);
     }
 
     const eligibleCount = eligibleMembers.length;

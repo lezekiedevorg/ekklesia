@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import { createClient } from "@/lib/supabase/server";
+import Navbar from "@/components/layout/Navbar";
 
 export const metadata: Metadata = {
   title: "Gestion Église - Suivi des Bergers et Âmes",
@@ -19,11 +21,24 @@ export const viewport: Viewport = {
   maximumScale: 1,
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Navbar lives here so it stays mounted across client navigations (SPA feel).
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  const profile = user
+    ? (
+        await supabase
+          .from("profiles")
+          .select("first_name, last_name, role, groups!profiles_group_id_fkey(name)")
+          .eq("id", user.id)
+          .single()
+      ).data as any
+    : null;
+
   return (
     <html
       lang="fr"
@@ -41,7 +56,16 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col bg-gradient-to-br from-slate-50 via-[#f8fafc] to-[#f1f5f9]">
+        {profile && (
+          <Navbar
+            role={profile.role}
+            groupName={profile.groups?.name ?? profile.groups?.[0]?.name}
+            userName={`${profile.first_name} ${profile.last_name}`}
+          />
+        )}
+        {children}
+      </body>
     </html>
   );
 }

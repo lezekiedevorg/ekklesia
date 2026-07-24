@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { createUserAction, updateUserRoleAction, deleteUserAction } from '@/app/admin/actions/users';
+import Pagination from '@/components/common/Pagination';
 
 interface Profile {
   id: string;
@@ -16,7 +17,7 @@ interface Profile {
   [key: string]: any;
 }
 
-export default function UsersManager({ initialUsers }: { initialUsers: Profile[] }) {
+export default function UsersManager({ initialUsers, roles, groups }: { initialUsers: Profile[]; roles: { code: string; name: string }[]; groups: { id: string; name: string }[] }) {
   const [users, setUsers] = useState<Profile[]>(initialUsers);
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('ALL');
@@ -42,6 +43,11 @@ export default function UsersManager({ initialUsers }: { initialUsers: Profile[]
     const matchesRole = roleFilter === 'ALL' || userRole === roleFilter;
     return matchesSearch && matchesRole;
   });
+
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(5);
+  useEffect(() => { setPage(1); }, [search, roleFilter]);
+  const pagedUsers = filteredUsers.slice((page - 1) * pageSize, page * pageSize);
 
   const openCreateModal = () => {
     setEditingUser(null);
@@ -163,11 +169,9 @@ export default function UsersManager({ initialUsers }: { initialUsers: Profile[]
             className="px-4 py-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-sm font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
           >
             <option value="ALL">Tous les rôles</option>
-            <option value="super_admin">Super Administrateurs</option>
-            <option value="admin">Administrateurs</option>
-            <option value="pastor">Pasteurs</option>
-            <option value="leader">Leaders</option>
-            <option value="shepherd">Bergers</option>
+            {roles.map((r) => (
+              <option key={r.code} value={r.code}>{r.name}</option>
+            ))}
           </select>
         </div>
 
@@ -209,7 +213,7 @@ export default function UsersManager({ initialUsers }: { initialUsers: Profile[]
                   </td>
                 </tr>
               ) : (
-                filteredUsers.map((u) => {
+                pagedUsers.map((u) => {
                   const currentRole = u.app_user_roles?.[0]?.role_code || u.role || 'shepherd';
                   return (
                     <tr key={u.id} className="hover:bg-slate-50/50 transition-colors">
@@ -267,6 +271,7 @@ export default function UsersManager({ initialUsers }: { initialUsers: Profile[]
             </tbody>
           </table>
         </div>
+        <Pagination total={filteredUsers.length} page={page} pageSize={pageSize} onPage={setPage} onPageSize={setPageSize} />
       </div>
 
       {/* Create/Edit Modal */}
@@ -363,23 +368,24 @@ export default function UsersManager({ initialUsers }: { initialUsers: Profile[]
                   onChange={(e) => setRoleCode(e.target.value)}
                   className="w-full px-3.5 py-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-sm font-bold text-[#1e1b4b] focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
                 >
-                  <option value="shepherd">Berger / Encadrant</option>
-                  <option value="leader">Leader / Chef de Tribu</option>
-                  <option value="pastor">Pasteur Principal</option>
-                  <option value="admin">Administrateur</option>
-                  <option value="super_admin">Super Administrateur</option>
+                  {roles.map((r) => (
+                    <option key={r.code} value={r.code}>{r.name}</option>
+                  ))}
                 </select>
               </div>
 
               <div>
                 <label className="block text-xs font-black uppercase tracking-wider text-slate-600 mb-1.5">Groupe / Tribu de rattachement</label>
-                <input
-                  type="text"
+                <select
                   value={groupId}
                   onChange={(e) => setGroupId(e.target.value)}
-                  placeholder="ID du groupe ou laissez vide"
                   className="w-full px-3.5 py-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
-                />
+                >
+                  <option value="">— Aucun groupe —</option>
+                  {groups.map((g) => (
+                    <option key={g.id} value={g.id}>{g.name}</option>
+                  ))}
+                </select>
                 <p className="text-[11px] text-slate-400 mt-1">Optionnel. Permet d&apos;assigner directement l&apos;utilisateur à une tribu.</p>
               </div>
 

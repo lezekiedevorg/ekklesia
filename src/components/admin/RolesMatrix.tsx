@@ -1,13 +1,18 @@
 'use client';
 
-import { useState } from 'react';
-import { updateRolePermissionsAction } from '@/app/admin/actions/roles';
+import { Fragment, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import {
+  updateRolePermissionsAction,
+  createRoleAction,
+  deleteRoleAction,
+} from '@/app/admin/actions/roles';
 
 interface Role {
   code: string;
   name: string;
   description?: string;
-  level: number;
+  is_system?: boolean;
 }
 
 interface Permission {
@@ -43,6 +48,40 @@ export default function RolesMatrix({
   const [savingRole, setSavingRole] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [showCreate, setShowCreate] = useState(false);
+  const [newRole, setNewRole] = useState({ code: '', name: '', description: '' });
+  const [busy, setBusy] = useState(false);
+  const router = useRouter();
+
+  const createRole = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setBusy(true);
+    setError(null);
+    setMessage(null);
+    const result = await createRoleAction(newRole);
+    setBusy(false);
+    if (result.error) {
+      setError(result.error);
+    } else {
+      setMessage(result.message || 'Rôle créé');
+      setShowCreate(false);
+      setNewRole({ code: '', name: '', description: '' });
+      router.refresh();
+    }
+  };
+
+  const removeRole = async (roleCode: string, roleName: string) => {
+    if (!confirm(`Supprimer le rôle "${roleName}" ? Cette action est irréversible.`)) return;
+    setError(null);
+    setMessage(null);
+    const result = await deleteRoleAction(roleCode);
+    if (result.error) {
+      setError(result.error);
+    } else {
+      setMessage(result.message || 'Rôle supprimé');
+      router.refresh();
+    }
+  };
 
   const togglePermission = (roleCode: string, permCode: string) => {
     if (roleCode === 'super_admin') return; // Super admin always has all
@@ -76,9 +115,46 @@ export default function RolesMatrix({
     if (!categories[cat]) categories[cat] = [];
     categories[cat].push(p);
   });
+  const categoryNames = Object.keys(categories);
+
+  // Accordion: collapsed by default so the matrix stays compact
+  const [expandedCats, setExpandedCats] = useState<Set<string>>(new Set());
+  const toggleCat = (cat: string) =>
+    setExpandedCats((prev) => {
+      const next = new Set(prev);
+      next.has(cat) ? next.delete(cat) : next.add(cat);
+      return next;
+    });
+  const expandAll = () => setExpandedCats(new Set(categoryNames));
+  const collapseAll = () => setExpandedCats(new Set());
+
+  const grantedInCat = (perms: Permission[], roleCode: string) =>
+    roleCode === 'super_admin'
+      ? perms.length
+      : perms.filter((p) => matrix[`${roleCode}:${p.code}`]).length;
 
   return (
     <div className="space-y-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex gap-2">
+          <button onClick={expandAll} className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white border border-slate-200 text-slate-600 hover:text-[#1e1b4b] hover:border-[#1e1b4b]/30 text-xs font-bold transition-all">
+            <span className="material-symbols-outlined text-[16px]">unfold_more</span>
+            Tout déplier
+          </button>
+          <button onClick={collapseAll} className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white border border-slate-200 text-slate-600 hover:text-[#1e1b4b] hover:border-[#1e1b4b]/30 text-xs font-bold transition-all">
+            <span className="material-symbols-outlined text-[16px]">unfold_less</span>
+            Tout replier
+          </button>
+        </div>
+        <button
+          onClick={() => setShowCreate(true)}
+          className="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-gradient-to-r from-[#1e1b4b] to-indigo-900 text-white font-black text-xs uppercase tracking-wider shadow-sm hover:scale-105 transition-all"
+        >
+          <span className="material-symbols-outlined text-[18px] text-[#fea619]">add_circle</span>
+          Nouveau rôle
+        </button>
+      </div>
+
       {message && (
         <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm font-bold flex items-center gap-2">
           <span>✅</span>
@@ -97,25 +173,51 @@ export default function RolesMatrix({
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-slate-50/80 border-b border-slate-200/80 text-[11px] font-black uppercase tracking-wider text-slate-400">
+              <tr className="bg-gradient-to-r from-[#1e1b4b] to-[#312e81] text-[11px] font-black uppercase tracking-wider text-indigo-200">
                 <th className="py-4 px-6 min-w-[240px]">Permission / Fonctionnalité</th>
                 {roles.map((r) => (
                   <th key={r.code} className="py-4 px-4 text-center min-w-[140px]">
-                    <div className="font-black text-[#1e1b4b] text-xs">{r.name}</div>
-                    <div className="text-[10px] font-mono text-slate-400 mt-0.5">{r.code}</div>
+                    <div className="font-black text-white text-xs">{r.name}</div>
+                    <div className="text-[10px] font-mono text-indigo-300/80 mt-0.5">{r.code}</div>
+                    {r.is_system ? (
+                      <div className="text-[9px] font-bold text-indigo-300/60 uppercase mt-0.5">Système</div>
+                    ) : (
+                      <button
+                        onClick={() => removeRole(r.code, r.name)}
+                        className="text-[10px] font-bold text-rose-300 hover:text-rose-200 mt-0.5 inline-flex items-center gap-0.5"
+                        title="Supprimer ce rôle"
+                      >
+                        <span className="material-symbols-outlined text-[12px]">delete</span>
+                        Supprimer
+                      </button>
+                    )}
                   </th>
                 ))}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-sm">
-              {Object.entries(categories).map(([category, perms]) => (
+              {Object.entries(categories).map(([category, perms]) => {
+                const open = expandedCats.has(category);
+                return (
                 <Fragment key={category}>
-                  <tr className="bg-indigo-50/60 border-t border-b border-indigo-100/60 font-black text-xs text-indigo-900">
-                    <td colSpan={roles.length + 1} className="py-2.5 px-6 uppercase tracking-wider">
-                      📁 {category}
+                  <tr
+                    className="bg-indigo-50/70 border-t border-b border-indigo-100 font-black text-xs text-indigo-900 cursor-pointer hover:bg-indigo-100/70 transition-colors"
+                    onClick={() => toggleCat(category)}
+                  >
+                    <td className="py-3 px-6 uppercase tracking-wider">
+                      <div className="flex items-center gap-2">
+                        <span className={`material-symbols-outlined text-[18px] transition-transform ${open ? 'rotate-90' : ''}`}>chevron_right</span>
+                        <span>{category}</span>
+                        <span className="text-[10px] font-bold text-indigo-400 normal-case">({perms.length})</span>
+                      </div>
                     </td>
+                    {roles.map((r) => (
+                      <td key={`cat-${category}-${r.code}`} className="py-3 px-4 text-center text-[11px] font-bold text-indigo-400">
+                        {grantedInCat(perms, r.code)}/{perms.length}
+                      </td>
+                    ))}
                   </tr>
-                  {perms.map((p) => (
+                  {open && perms.map((p) => (
                     <tr key={p.code} className="hover:bg-slate-50/50 transition-colors">
                       <td className="py-3.5 px-6">
                         <div className="font-bold text-slate-800">{p.name}</div>
@@ -142,7 +244,8 @@ export default function RolesMatrix({
                     </tr>
                   ))}
                 </Fragment>
-              ))}
+                );
+              })}
             </tbody>
             <tfoot>
               <tr className="bg-slate-50/80 border-t border-slate-200/80">
@@ -169,8 +272,70 @@ export default function RolesMatrix({
           </table>
         </div>
       </div>
+
+      {showCreate && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-3xl p-6 sm:p-8 w-full max-w-md shadow-2xl">
+            <div className="flex items-center gap-2.5 mb-5">
+              <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-[#1e1b4b] to-[#4338ca] text-[#fea619] flex items-center justify-center shadow-md">
+                <span className="material-symbols-outlined text-[18px]">add_circle</span>
+              </div>
+              <h2 className="text-xl font-black text-[#1e1b4b]">Nouveau rôle</h2>
+            </div>
+            <form onSubmit={createRole} className="space-y-4">
+              <div>
+                <label className="block text-xs font-extrabold uppercase tracking-wider text-slate-600 mb-1.5">Nom</label>
+                <input
+                  type="text"
+                  required
+                  value={newRole.name}
+                  onChange={(e) => setNewRole({ ...newRole, name: e.target.value })}
+                  className="w-full px-4 py-3 rounded-2xl bg-slate-50/90 border border-slate-200/80 text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#1e1b4b]/20 focus:border-[#1e1b4b]"
+                  placeholder="Ex: Ami des Nouveaux"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-extrabold uppercase tracking-wider text-slate-600 mb-1.5">Code technique</label>
+                <input
+                  type="text"
+                  required
+                  value={newRole.code}
+                  onChange={(e) => setNewRole({ ...newRole, code: e.target.value })}
+                  className="w-full px-4 py-3 rounded-2xl bg-slate-50/90 border border-slate-200/80 text-xs font-mono text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#1e1b4b]/20 focus:border-[#1e1b4b]"
+                  placeholder="ex: newcomer_friend"
+                />
+                <p className="text-[11px] text-slate-400 mt-1">Minuscules, chiffres et underscores. Immuable après création.</p>
+              </div>
+              <div>
+                <label className="block text-xs font-extrabold uppercase tracking-wider text-slate-600 mb-1.5">Description</label>
+                <textarea
+                  value={newRole.description}
+                  onChange={(e) => setNewRole({ ...newRole, description: e.target.value })}
+                  rows={3}
+                  className="w-full px-4 py-3 rounded-2xl bg-slate-50/90 border border-slate-200/80 text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#1e1b4b]/20 focus:border-[#1e1b4b]"
+                  placeholder="Rôle du membre..."
+                />
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowCreate(false)}
+                  className="flex-1 py-3 rounded-2xl text-xs font-bold bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors"
+                >
+                  Annuler
+                </button>
+                <button
+                  type="submit"
+                  disabled={busy}
+                  className="flex-1 py-3 rounded-2xl text-xs font-black text-white bg-gradient-to-r from-[#1e1b4b] to-[#4338ca] hover:from-[#312e81] hover:to-[#4338ca] shadow-md transition-all disabled:opacity-50"
+                >
+                  {busy ? 'Création...' : 'Créer le rôle'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
-
-import { Fragment } from 'react';

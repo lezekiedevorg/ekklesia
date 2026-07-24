@@ -1,16 +1,10 @@
 "use client";
 
 import React from "react";
+import { MONTHLY_ITEMS } from "@/lib/constants/programs";
 
 interface MonthlyActivitiesSectionProps {
-  form: {
-    monthly_pre_service_intercession: boolean;
-    monthly_in_person_prayer_done: boolean;
-    monthly_anagkazo: boolean;
-    monthly_group_evangelization: boolean;
-    monthly_prayer_vigil_done: boolean;
-    prayer_chain_done: boolean;
-  };
+  form: Record<string, any>;
   setForm: React.Dispatch<React.SetStateAction<any>>;
 }
 
@@ -19,14 +13,7 @@ export function MonthlyActivitiesSection({ form, setForm }: MonthlyActivitiesSec
     setForm((prev: any) => ({ ...prev, [key]: !prev[key] }));
   };
 
-  const items = [
-    { key: "monthly_pre_service_intercession", label: "Intercession avant culte dominical" },
-    { key: "monthly_in_person_prayer_done", label: "Prière en présentiel (Mardi / Jeudi)" },
-    { key: "monthly_anagkazo", label: "Anagkazo (Rassemblement & Invites)" },
-    { key: "monthly_group_evangelization", label: "Évangélisation de groupe (Samedi)" },
-    { key: "monthly_prayer_vigil_done", label: "Mini veillée de prière personnelle" },
-    { key: "prayer_chain_done", label: "Participation aux Chaînes de Prière" },
-  ];
+  const items = MONTHLY_ITEMS;
 
   return (
     <div className="glass-panel p-5 sm:p-6 space-y-5">

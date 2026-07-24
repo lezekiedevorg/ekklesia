@@ -5,9 +5,13 @@ export const customServerFetch = async (url: RequestInfo | URL, options: any = {
     try {
       if (!httpsAgent) {
         const https = await import('node:https')
+        // keepAlive impératif : sans réutilisation de socket, chaque appel
+        // rouvre une poignée de main TLS. Sur les pages serveur qui enchaînent
+        // plusieurs requêtes (backoffice /admin), 7 handshakes à froid vers
+        // Supabase dépassaient 2 min et faisaient « tourner » la page sans fin.
         httpsAgent = new https.Agent({
           ALPNProtocols: ['http/1.1'],
-          keepAlive: false,
+          keepAlive: true,
         } as any)
       }
       const { default: nodeFetch } = await import('node-fetch')
@@ -37,6 +41,7 @@ export const customServerFetch = async (url: RequestInfo | URL, options: any = {
         ...cleanOptions,
         headers: headersObj,
         agent: urlStr.startsWith('https') ? httpsAgent : undefined,
+        timeout: 15000, // filet de sécurité : échouer vite plutôt que pendre indéfiniment
       } as any) as unknown as Promise<Response>
     } catch (err) {
       console.error('customServerFetch fallback to native fetch:', err)

@@ -1,17 +1,19 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import PageLoader from "@/components/common/PageLoader";
 import { createClient } from "@/lib/supabase/client";
-import Navbar from "@/components/layout/Navbar";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import WeekSelector from "@/components/common/WeekSelector";
+import NewcomerFriendDashboard from "@/components/dashboard/NewcomerFriendDashboard";
+import { hasOwnScope } from "@/lib/auth/roles";
 
 interface ProfileData {
   id: string;
   first_name: string;
   last_name: string;
-  role: "pastor" | "leader" | "shepherd";
+  role: "pastor" | "leader" | "shepherd" | "newcomer_friend";
   group_id: string | null;
   groups?: { name: string } | null;
 }
@@ -54,8 +56,8 @@ export default function DashboardPage() {
 
         setProfile(prof as ProfileData);
 
-        // Fetch relevant statistics based on role
-        if (prof.role === "shepherd") {
+        // Fetch relevant statistics based on role (main app = pastoral/berger view)
+        if (hasOwnScope(prof.role)) {
           const { data: members } = await supabase
             .from("members")
             .select("status")
@@ -100,7 +102,8 @@ export default function DashboardPage() {
             totalShepherds: shepherdIds.length,
             pendingReports: reports?.length || 0,
           });
-        } else if (prof.role === "pastor") {
+        } else {
+          // pastor, admin, super_admin : vue globale
           const { data: members } = await supabase
             .from("members")
             .select("status")
@@ -136,26 +139,16 @@ export default function DashboardPage() {
   }, [supabase, router, selectedDate]);
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-[#FAF9F6] flex items-center justify-center text-slate-600 font-sans">
-        <div className="glass-panel px-6 py-4 rounded-2xl flex items-center gap-3.5 font-label-caps font-bold text-sm shadow-xl">
-          <svg className="animate-spin h-5 w-5 text-[#1e1b4b]" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-          </svg>
-          <span>Ouverture du Sanctuaire & Chargement des Indicateurs...</span>
-        </div>
-      </div>
-    );
+    return <PageLoader label="Ouverture du Sanctuaire..." />;
+  }
+
+  // Les Amis des Nouveaux ont leur propre tableau de bord dédié
+  if (profile?.role === "newcomer_friend") {
+    return <NewcomerFriendDashboard firstName={profile.first_name} />;
   }
 
   return (
     <div className="min-h-screen bg-[#FAF9F6] text-slate-900 pb-28 font-sans">
-      <Navbar
-        role={profile?.role || "shepherd"}
-        groupName={profile?.groups?.name}
-        userName={profile ? `${profile.first_name} ${profile.last_name}` : undefined}
-      />
 
       <main className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 space-y-8 animate-fade-in-up page-transition">
         {/* Hero Welcome Banner */}

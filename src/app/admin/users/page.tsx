@@ -1,9 +1,18 @@
 import { getUsersAction } from '@/app/admin/actions/users';
+import { getRolesMatrixAction } from '@/app/admin/actions/roles';
+import { createClient } from '@/lib/supabase/server';
 import UsersManager from '@/components/admin/UsersManager';
 
 export default async function AdminUsersPage() {
-  const result = await getUsersAction();
+  const supabase = await createClient();
+  const [result, rolesResult, groupsRes] = await Promise.all([
+    getUsersAction(),
+    getRolesMatrixAction(),
+    supabase.from('groups').select('id, name').order('name'),
+  ]);
   const users = result.success ? result.users || [] : [];
+  const roles = rolesResult.success ? (rolesResult.roles || []).map((r: any) => ({ code: r.code, name: r.name })) : [];
+  const groups = (groupsRes.data || []).map((g: any) => ({ id: g.id, name: g.name }));
 
   return (
     <div className="space-y-6">
@@ -22,7 +31,7 @@ export default async function AdminUsersPage() {
         </div>
       )}
 
-      <UsersManager initialUsers={users} />
+      <UsersManager initialUsers={users} roles={roles} groups={groups} />
     </div>
   );
 }

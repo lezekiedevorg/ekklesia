@@ -153,3 +153,33 @@ body {
   animation: pageSlideIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
+
+/* ---- Rapport du berger imprimable (Enregistrer en PDF) ---- */
+.print-only {
+  display: none;
+}
+@media print {
+  body * {
+    visibility: hidden !important;
+  }
+  .print-only,
+  .print-only * {
+    visibility: visible !important;
+  }
+  .print-only {
+    display: block !important;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+  }
+  /* imposer couleurs de fond des bandeaux */
+  .print-only * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  @page {
+    size: A4 landscape;
+    margin: 8mm;
+  }
+}

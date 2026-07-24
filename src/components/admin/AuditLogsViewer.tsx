@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import Pagination from '@/components/common/Pagination';
 
 interface AuditLog {
   id: string;
@@ -29,6 +30,11 @@ export default function AuditLogsViewer({ initialLogs }: { initialLogs: AuditLog
     const matchesAction = actionFilter === 'ALL' || log.action.includes(actionFilter);
     return matchesSearch && matchesAction;
   });
+
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(5);
+  useEffect(() => { setPage(1); }, [search, actionFilter]);
+  const pagedLogs = filteredLogs.slice((page - 1) * pageSize, page * pageSize);
 
   const getActionBadge = (action: string) => {
     if (action.includes('CREATE')) {
@@ -96,7 +102,7 @@ export default function AuditLogsViewer({ initialLogs }: { initialLogs: AuditLog
                   </td>
                 </tr>
               ) : (
-                filteredLogs.map((log) => (
+                pagedLogs.map((log) => (
                   <tr key={log.id} className="hover:bg-slate-50/50 transition-colors">
                     <td className="py-4 px-6 text-slate-600 font-mono text-xs">
                       <div>{new Date(log.created_at).toLocaleDateString('fr-FR')}</div>
@@ -136,6 +142,7 @@ export default function AuditLogsViewer({ initialLogs }: { initialLogs: AuditLog
             </tbody>
           </table>
         </div>
+        <Pagination total={filteredLogs.length} page={page} pageSize={pageSize} onPage={setPage} onPageSize={setPageSize} />
       </div>
 
       {/* Payload Modal */}

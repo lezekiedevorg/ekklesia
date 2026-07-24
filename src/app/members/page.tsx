@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import PageLoader from "@/components/common/PageLoader";
 import { createClient } from "@/lib/supabase/client";
-import Navbar from "@/components/layout/Navbar";
 import { useRouter } from "next/navigation";
 import Modal from "@/components/common/Modal";
+import { hasOwnScope } from "@/lib/auth/roles";
 
 interface Member {
   id: string;
@@ -13,7 +14,8 @@ interface Member {
   phone: string;
   shepherd_id: string | null;
   invited_by_member_id: string | null;
-  status: "new" | "in_integration" | "member" | "absent_to_relaunch" | "archived";
+  status:
+    "new" | "in_integration" | "member" | "absent_to_relaunch" | "archived";
   current_class: "none" | "tuesday_class" | "wednesday_class" | "completed";
   consecutive_sundays_present: number;
   consecutive_absences: number;
@@ -81,7 +83,9 @@ export default function MembersPage() {
     async function loadMembers() {
       setLoading(true);
       try {
-        const { data: { user } } = await supabase.auth.getUser();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
         if (!user) {
           router.push("/login");
           return;
@@ -111,8 +115,11 @@ export default function MembersPage() {
         if (allMems) setAllMembers(allMems as Member[]);
 
         // Filtrer les fidèles selon le rôle dans la sphère (berger, leader ou pasteur)
-        let query = supabase.from("members").select("*").order("first_name", { ascending: true });
-        if (prof.role === "shepherd") {
+        let query = supabase
+          .from("members")
+          .select("*")
+          .order("first_name", { ascending: true });
+        if (hasOwnScope(prof.role)) {
           query = query.eq("shepherd_id", user.id);
         } else if (prof.role === "leader") {
           const { data: grpShepherds } = await supabase
@@ -120,7 +127,10 @@ export default function MembersPage() {
             .select("id")
             .eq("group_id", prof.group_id);
           const sIds = grpShepherds?.map((s) => s.id) || [];
-          query = query.in("shepherd_id", sIds.length > 0 ? sIds : ["00000000-0000-0000-0000-000000000000"]);
+          query = query.in(
+            "shepherd_id",
+            sIds.length > 0 ? sIds : ["00000000-0000-0000-0000-000000000000"],
+          );
         }
 
         const { data: mems } = await query;
@@ -174,11 +184,17 @@ export default function MembersPage() {
           invited_by_member_id: currentMember.invited_by_member_id || null,
           current_class: currentMember.current_class,
           status: currentMember.status,
-          consecutive_sundays_present: currentMember.status === "member" ? 4 : 1,
-          consecutive_absences: currentMember.status === "absent_to_relaunch" ? 2 : 0,
+          consecutive_sundays_present:
+            currentMember.status === "member" ? 4 : 1,
+          consecutive_absences:
+            currentMember.status === "absent_to_relaunch" ? 2 : 0,
         };
 
-        const { data, error } = await supabase.from("members").insert([payload]).select().single();
+        const { data, error } = await supabase
+          .from("members")
+          .insert([payload])
+          .select()
+          .single();
         if (error) throw error;
         if (data) {
           setMembers((prev) => [...prev, data as Member]);
@@ -205,8 +221,12 @@ export default function MembersPage() {
 
         if (error) throw error;
         if (data) {
-          setMembers((prev) => prev.map((m) => (m.id === currentMember.id ? (data as Member) : m)));
-          setAllMembers((prev) => prev.map((m) => (m.id === currentMember.id ? (data as Member) : m)));
+          setMembers((prev) =>
+            prev.map((m) => (m.id === currentMember.id ? (data as Member) : m)),
+          );
+          setAllMembers((prev) =>
+            prev.map((m) => (m.id === currentMember.id ? (data as Member) : m)),
+          );
           setModalMode(null);
         }
       }
@@ -218,7 +238,10 @@ export default function MembersPage() {
     }
   };
 
-  const handleUpdateClass = async (memberId: string, newClass: Member["current_class"]) => {
+  const handleUpdateClass = async (
+    memberId: string,
+    newClass: Member["current_class"],
+  ) => {
     try {
       const { error } = await supabase
         .from("members")
@@ -227,7 +250,9 @@ export default function MembersPage() {
 
       if (error) throw error;
       setMembers((prev) =>
-        prev.map((m) => (m.id === memberId ? { ...m, current_class: newClass } : m))
+        prev.map((m) =>
+          m.id === memberId ? { ...m, current_class: newClass } : m,
+        ),
       );
       setEditingClassId(null);
     } catch (err) {
@@ -246,7 +271,11 @@ export default function MembersPage() {
 
       if (error) throw error;
       setMembers((prev) =>
-        prev.map((m) => (m.id === memberId ? { ...m, status: "archived", archived_at: now } : m))
+        prev.map((m) =>
+          m.id === memberId
+            ? { ...m, status: "archived", archived_at: now }
+            : m,
+        ),
       );
     } catch (err) {
       console.error(err);
@@ -263,7 +292,11 @@ export default function MembersPage() {
 
       if (error) throw error;
       setMembers((prev) =>
-        prev.map((m) => (m.id === memberId ? { ...m, status: "in_integration", archived_at: null } : m))
+        prev.map((m) =>
+          m.id === memberId
+            ? { ...m, status: "in_integration", archived_at: null }
+            : m,
+        ),
       );
     } catch (err) {
       console.error(err);
@@ -272,7 +305,11 @@ export default function MembersPage() {
   };
 
   const handlePermanentDelete = async (memberId: string) => {
-    if (!confirm("Attention ! Cette action va supprimer définitivement cette personne de la base de données. Voulez-vous continuer ?")) {
+    if (
+      !confirm(
+        "Attention ! Cette action va supprimer définitivement cette personne de la base de données. Voulez-vous continuer ?",
+      )
+    ) {
       return;
     }
     try {
@@ -291,7 +328,12 @@ export default function MembersPage() {
   };
 
   const getDaysLeftBadge = (archivedAt?: string | null) => {
-    if (!archivedAt) return <span className="text-xs font-bold text-amber-700">⏳ 90 jours restants</span>;
+    if (!archivedAt)
+      return (
+        <span className="text-xs font-bold text-amber-700">
+          ⏳ 90 jours restants
+        </span>
+      );
     const diffMs = Date.now() - new Date(archivedAt).getTime();
     const diffDays = Math.floor(diffMs / (1000 * 3600 * 24));
     const daysLeft = Math.max(0, 90 - diffDays);
@@ -305,12 +347,17 @@ export default function MembersPage() {
   const activeMembers = members.filter((m) => m.status !== "archived");
   const archivedMembersList = members.filter((m) => m.status === "archived");
 
-  const filteredMembers = (activeTab === "active" ? activeMembers : archivedMembersList).filter((m) => {
+  const filteredMembers = (
+    activeTab === "active" ? activeMembers : archivedMembersList
+  ).filter((m) => {
     const matchesSearch =
-      `${m.first_name} ${m.last_name}`.toLowerCase().includes(search.toLowerCase()) ||
+      `${m.first_name} ${m.last_name}`
+        .toLowerCase()
+        .includes(search.toLowerCase()) ||
       (m.phone && m.phone.includes(search));
     const matchesStatus = statusFilter === "all" || m.status === statusFilter;
-    const matchesClass = classFilter === "all" || m.current_class === classFilter;
+    const matchesClass =
+      classFilter === "all" || m.current_class === classFilter;
     if (activeTab === "archived") return matchesSearch;
     return matchesSearch && matchesStatus && matchesClass;
   });
@@ -322,7 +369,7 @@ export default function MembersPage() {
   const totalPages = Math.ceil(filteredMembers.length / itemsPerPage);
   const paginatedMembers = filteredMembers.slice(
     (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
+    currentPage * itemsPerPage,
   );
 
   const getStatusBadge = (status: Member["status"]) => {
@@ -330,25 +377,33 @@ export default function MembersPage() {
       case "new":
         return (
           <span className="px-3 py-1 rounded-full text-[11px] font-label-caps font-black bg-indigo-50 text-indigo-700 border border-indigo-200/80 shadow-2xs flex items-center gap-1.5 shrink-0">
-            <span className="w-1.5 h-1.5 rounded-full bg-indigo-600 animate-pulse" /> Nouveau
+            <span className="w-1.5 h-1.5 rounded-full bg-indigo-600 animate-pulse" />{" "}
+            Nouveau
           </span>
         );
       case "in_integration":
         return (
           <span className="px-3 py-1 rounded-full text-[11px] font-label-caps font-black bg-purple-50 text-purple-700 border border-purple-200/80 shadow-2xs flex items-center gap-1.5 shrink-0">
-            <span className="w-1.5 h-1.5 rounded-full bg-purple-600 animate-pulse" /> En Intégration
+            <span className="w-1.5 h-1.5 rounded-full bg-purple-600 animate-pulse" />{" "}
+            En Intégration
           </span>
         );
       case "member":
         return (
           <span className="px-3 py-1 rounded-full text-[11px] font-label-caps font-black bg-emerald-50 text-emerald-700 border border-emerald-200/80 shadow-2xs flex items-center gap-1.5 shrink-0">
-            <span className="material-symbols-outlined text-[14px]">verified</span> Membre Intégré
+            <span className="material-symbols-outlined text-[14px]">
+              verified
+            </span>{" "}
+            Membre Intégré
           </span>
         );
       case "absent_to_relaunch":
         return (
           <span className="px-3 py-1 rounded-full text-[11px] font-label-caps font-black bg-rose-50 text-rose-700 border border-rose-300 shadow-2xs animate-pulse flex items-center gap-1.5 shrink-0">
-            <span className="material-symbols-outlined text-[14px] text-rose-600">warning</span> Absent à relancer
+            <span className="material-symbols-outlined text-[14px] text-rose-600">
+              warning
+            </span>{" "}
+            Absent à relancer
           </span>
         );
       case "archived":
@@ -363,47 +418,59 @@ export default function MembersPage() {
   const getClassBadge = (currentClass: Member["current_class"]) => {
     switch (currentClass) {
       case "none":
-        return <span className="px-2.5 py-1 rounded-xl text-[11px] font-bold bg-slate-100 text-slate-600 border border-slate-200/80">Aucune classe</span>;
+        return (
+          <span className="px-2.5 py-1 rounded-xl text-[11px] font-bold bg-slate-100 text-slate-600 border border-slate-200/80">
+            Aucune classe
+          </span>
+        );
       case "tuesday_class":
-        return <span className="px-2.5 py-1 rounded-xl text-[11px] font-bold bg-blue-50 text-blue-700 border border-blue-200/80 flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-blue-500" /> Classe du Mardi</span>;
+        return (
+          <span className="px-2.5 py-1 rounded-xl text-[11px] font-bold bg-blue-50 text-blue-700 border border-blue-200/80 flex items-center gap-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-blue-500" /> Classe du
+            Mardi
+          </span>
+        );
       case "wednesday_class":
-        return <span className="px-2.5 py-1 rounded-xl text-[11px] font-bold bg-purple-50 text-purple-700 border border-purple-200/80 flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-purple-500" /> Classe du Mercredi</span>;
+        return (
+          <span className="px-2.5 py-1 rounded-xl text-[11px] font-bold bg-purple-50 text-purple-700 border border-purple-200/80 flex items-center gap-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-purple-500" /> Classe
+            du Mercredi
+          </span>
+        );
       case "completed":
-        return <span className="px-2.5 py-1 rounded-xl text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200/80 flex items-center gap-1"><span className="material-symbols-outlined text-[14px]">check_circle</span> Classes Terminées</span>;
+        return (
+          <span className="px-2.5 py-1 rounded-xl text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200/80 flex items-center gap-1">
+            <span className="material-symbols-outlined text-[14px]">
+              check_circle
+            </span>{" "}
+            Classes Terminées
+          </span>
+        );
     }
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-[#FAF9F6] flex items-center justify-center text-slate-600 font-sans">
-        <div className="glass-panel px-6 py-4 rounded-2xl shadow-xl flex items-center gap-3.5 font-label-caps font-bold text-sm">
-          <svg className="animate-spin h-5 w-5 text-[#1e1b4b]" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-          </svg>
-          <span>Chargement de l&apos;annuaire du troupeau...</span>
-        </div>
-      </div>
-    );
+    return <PageLoader label="Chargement de l'annuaire du troupeau..." />;
   }
 
   return (
     <div className="min-h-screen bg-[#FAF9F6] text-slate-900 pb-28 font-sans">
-      <Navbar
-        role={profile?.role || "shepherd"}
-        groupName={profile?.groups?.name}
-        userName={profile ? `${profile.first_name} ${profile.last_name}` : undefined}
-      />
-
       <main className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 space-y-7 animate-fade-in-up">
         {/* Header Section */}
         <div className="glass-panel p-6 sm:p-8 rounded-3xl shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-6 relative overflow-hidden">
           <div className="absolute right-0 top-0 w-80 h-80 bg-gradient-to-bl from-indigo-500/10 via-purple-500/10 to-transparent rounded-full blur-3xl pointer-events-none" />
-          
+
           <div className="relative z-10">
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#1e1b4b] text-[#e3dfff] mb-3 border border-[#fea619]/40 shadow-xs">
-              <span className="material-symbols-outlined text-[16px] text-[#fea619]" style={{ fontVariationSettings: "'FILL' 1" }}>groups</span>
-              <span className="font-label-caps font-extrabold text-[11px] uppercase tracking-wider">Annuaire des Fidèles</span>
+              <span
+                className="material-symbols-outlined text-[16px] text-[#fea619]"
+                style={{ fontVariationSettings: "'FILL' 1" }}
+              >
+                groups
+              </span>
+              <span className="font-label-caps font-extrabold text-[11px] uppercase tracking-wider">
+                Annuaire des Fidèles
+              </span>
             </div>
             <h1 className="font-headline-md font-extrabold text-2xl sm:text-3xl text-[#1e1b4b] tracking-tight flex items-center gap-3">
               Fidèles & Suivi des Âmes
@@ -412,7 +479,8 @@ export default function MembersPage() {
               </span>
             </h1>
             <p className="text-slate-600 text-xs sm:text-sm mt-1.5 font-medium max-w-2xl">
-              Gérez vos fidèles, actualisez leurs informations et suivez leur statut spirituel de l&apos;accueil au service spirituel.
+              Gérez vos fidèles, actualisez leurs informations et suivez leur
+              statut spirituel de l&apos;accueil au service spirituel.
             </p>
           </div>
 
@@ -420,7 +488,9 @@ export default function MembersPage() {
             onClick={openCreateModal}
             className="px-6 py-4 rounded-2xl font-headline-md font-extrabold text-xs text-white bg-gradient-to-r from-[#1e1b4b] via-[#312e81] to-[#4338ca] hover:from-[#312e81] hover:to-[#4338ca] shadow-lg shadow-indigo-950/25 transition-all transform hover:scale-[1.02] active:scale-[0.98] shrink-0 flex items-center justify-center gap-2.5 cursor-pointer border border-[#fea619]/40 relative z-10"
           >
-            <span className="material-symbols-outlined text-[20px] text-[#fea619]">person_add</span>
+            <span className="material-symbols-outlined text-[20px] text-[#fea619]">
+              person_add
+            </span>
             Inscrire une nouvelle âme
           </button>
         </div>
@@ -436,7 +506,9 @@ export default function MembersPage() {
             }`}
           >
             <span>Membres Actifs</span>
-            <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${activeTab === "active" ? "bg-[#fea619] text-slate-900" : "bg-slate-100 text-slate-700"}`}>
+            <span
+              className={`px-2 py-0.5 rounded-full text-[10px] font-black ${activeTab === "active" ? "bg-[#fea619] text-slate-900" : "bg-slate-100 text-slate-700"}`}
+            >
               {activeMembers.length}
             </span>
           </button>
@@ -449,7 +521,9 @@ export default function MembersPage() {
             }`}
           >
             <span>Archives & Purgatoire</span>
-            <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${activeTab === "archived" ? "bg-white text-amber-800" : "bg-amber-100 text-amber-800"}`}>
+            <span
+              className={`px-2 py-0.5 rounded-full text-[10px] font-black ${activeTab === "archived" ? "bg-white text-amber-800" : "bg-amber-100 text-amber-800"}`}
+            >
               {archivedMembersList.length}
             </span>
           </button>
@@ -480,9 +554,13 @@ export default function MembersPage() {
                 >
                   <option value="all">Tous les statuts spirituels</option>
                   <option value="new">Nouveaux (Dimanche 1)</option>
-                  <option value="in_integration">En Intégration (Dimanches 2 à 4)</option>
+                  <option value="in_integration">
+                    En Intégration (Dimanches 2 à 4)
+                  </option>
                   <option value="member">Membres Intégrés</option>
-                  <option value="absent_to_relaunch">Absents à relancer ⚠️</option>
+                  <option value="absent_to_relaunch">
+                    Absents à relancer ⚠️
+                  </option>
                 </select>
               </div>
 
@@ -492,7 +570,9 @@ export default function MembersPage() {
                   onChange={(e) => setClassFilter(e.target.value)}
                   className="w-full px-4 py-3 rounded-2xl bg-slate-50/90 border border-slate-200/80 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#1e1b4b]/20 focus:border-[#1e1b4b] focus:bg-white transition-all shadow-2xs cursor-pointer"
                 >
-                  <option value="all">Toutes les classes d&apos;enseignement</option>
+                  <option value="all">
+                    Toutes les classes d&apos;enseignement
+                  </option>
                   <option value="tuesday_class">Classe du Mardi</option>
                   <option value="wednesday_class">Classe du Mercredi</option>
                   <option value="completed">Classes Terminées</option>
@@ -502,8 +582,14 @@ export default function MembersPage() {
             </>
           ) : (
             <div className="md:col-span-2 flex items-center px-4 py-3 text-xs font-bold text-amber-900 bg-amber-50/90 rounded-2xl border border-amber-200/80 shadow-2xs">
-              <span className="material-symbols-outlined text-[18px] text-amber-600 mr-2 shrink-0">info</span>
-              <span>Les fidèles dans cette section seront définitivement supprimés après un délai de 90 jours s&apos;ils ne sont pas réintégrés au troupeau.</span>
+              <span className="material-symbols-outlined text-[18px] text-amber-600 mr-2 shrink-0">
+                info
+              </span>
+              <span>
+                Les fidèles dans cette section seront définitivement supprimés
+                après un délai de 90 jours s&apos;ils ne sont pas réintégrés au
+                troupeau.
+              </span>
             </div>
           )}
         </div>
@@ -512,10 +598,17 @@ export default function MembersPage() {
         {filteredMembers.length === 0 ? (
           <div className="glass-panel rounded-3xl p-14 text-center shadow-sm">
             <div className="w-16 h-16 rounded-3xl bg-indigo-50 border border-indigo-100 flex items-center justify-center mx-auto text-[#1e1b4b] mb-4 shadow-sm">
-              <span className="material-symbols-outlined text-[32px]">person_off</span>
+              <span className="material-symbols-outlined text-[32px]">
+                person_off
+              </span>
             </div>
-            <h3 className="text-base font-headline-md font-extrabold text-slate-900">Aucun fidèle ne correspond à vos critères</h3>
-            <p className="text-xs font-medium text-slate-500 mt-1.5 max-w-sm mx-auto">Essayez d&apos;élargir votre recherche ou de modifier vos filtres d&apos;affichage.</p>
+            <h3 className="text-base font-headline-md font-extrabold text-slate-900">
+              Aucun fidèle ne correspond à vos critères
+            </h3>
+            <p className="text-xs font-medium text-slate-500 mt-1.5 max-w-sm mx-auto">
+              Essayez d&apos;élargir votre recherche ou de modifier vos filtres
+              d&apos;affichage.
+            </p>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
@@ -523,21 +616,34 @@ export default function MembersPage() {
               <div
                 key={member.id}
                 className={`card-luxe p-5 transition-all flex flex-col justify-between ${
-                  activeTab === "archived" ? "border-amber-200/80 bg-amber-50/20" : ""
+                  activeTab === "archived"
+                    ? "border-amber-200/80 bg-amber-50/20"
+                    : ""
                 }`}
               >
                 <div>
                   <div className="flex items-start justify-between gap-3 mb-3.5">
                     <div className="min-w-0 flex-1">
-                      <h3 className="text-sm sm:text-base font-headline-md font-extrabold text-slate-900 truncate" title={`${member.first_name} ${member.last_name}`}>
+                      <h3
+                        className="text-sm sm:text-base font-headline-md font-extrabold text-slate-900 truncate"
+                        title={`${member.first_name} ${member.last_name}`}
+                      >
                         {member.first_name} {member.last_name}
                       </h3>
                       {member.phone ? (
-                        <a href={`tel:${member.phone}`} className="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 mt-1 flex items-center gap-1 truncate">
-                          <span className="material-symbols-outlined text-[14px]">call</span> {member.phone}
+                        <a
+                          href={`tel:${member.phone}`}
+                          className="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 mt-1 flex items-center gap-1 truncate"
+                        >
+                          <span className="material-symbols-outlined text-[14px]">
+                            call
+                          </span>{" "}
+                          {member.phone}
                         </a>
                       ) : (
-                        <span className="text-[11px] font-medium text-slate-400 mt-1 block truncate">Aucun téléphone</span>
+                        <span className="text-[11px] font-medium text-slate-400 mt-1 block truncate">
+                          Aucun téléphone
+                        </span>
                       )}
                     </div>
                     <div className="shrink-0">
@@ -548,13 +654,21 @@ export default function MembersPage() {
                   {activeTab === "archived" ? (
                     <div className="space-y-2.5 my-3.5 py-3 border-y border-amber-100/80 text-[11px]">
                       <div className="flex items-center justify-between gap-2">
-                        <span className="text-amber-900 font-semibold truncate">Archivé depuis :</span>
+                        <span className="text-amber-900 font-semibold truncate">
+                          Archivé depuis :
+                        </span>
                         <span className="font-bold text-slate-700 whitespace-nowrap shrink-0">
-                          {member.archived_at ? new Date(member.archived_at).toLocaleDateString("fr-FR") : "Récent"}
+                          {member.archived_at
+                            ? new Date(member.archived_at).toLocaleDateString(
+                                "fr-FR",
+                              )
+                            : "Récent"}
                         </span>
                       </div>
                       <div className="flex items-center justify-between gap-2">
-                        <span className="text-amber-900 font-semibold truncate">Décompte purgatoire :</span>
+                        <span className="text-amber-900 font-semibold truncate">
+                          Décompte purgatoire :
+                        </span>
                         <div className="shrink-0">
                           {getDaysLeftBadge(member.archived_at)}
                         </div>
@@ -563,23 +677,35 @@ export default function MembersPage() {
                   ) : (
                     <div className="space-y-2.5 my-3.5 py-3.5 border-y border-slate-100 text-[11px] font-medium">
                       <div className="flex items-center justify-between gap-2">
-                        <span className="text-slate-500 font-semibold truncate">Dimanches présents :</span>
+                        <span className="text-slate-500 font-semibold truncate">
+                          Dimanches présents :
+                        </span>
                         <span className="font-extrabold text-[#1e1b4b] bg-indigo-50/80 px-2.5 py-0.5 rounded-lg border border-indigo-200/60 shadow-2xs whitespace-nowrap shrink-0 font-stat-mono text-xs">
                           {member.consecutive_sundays_present} / 4 Dim.
                         </span>
                       </div>
 
                       <div className="flex items-center justify-between gap-2">
-                        <span className="text-slate-500 font-semibold truncate">Absences d&apos;affilée :</span>
-                        <span className={`font-extrabold whitespace-nowrap shrink-0 font-stat-mono text-xs ${member.consecutive_absences >= 2 ? "text-rose-700 bg-rose-50 px-2.5 py-0.5 rounded-lg border border-rose-200/80 shadow-2xs animate-pulse" : "text-slate-700"}`}>
+                        <span className="text-slate-500 font-semibold truncate">
+                          Absences d&apos;affilée :
+                        </span>
+                        <span
+                          className={`font-extrabold whitespace-nowrap shrink-0 font-stat-mono text-xs ${member.consecutive_absences >= 2 ? "text-rose-700 bg-rose-50 px-2.5 py-0.5 rounded-lg border border-rose-200/80 shadow-2xs animate-pulse" : "text-slate-700"}`}
+                        >
                           {member.consecutive_absences} sem.
                         </span>
                       </div>
 
                       <div className="flex items-center justify-between gap-2">
-                        <span className="text-slate-500 font-semibold truncate">Dernière venue :</span>
+                        <span className="text-slate-500 font-semibold truncate">
+                          Dernière venue :
+                        </span>
                         <span className="text-slate-800 font-bold whitespace-nowrap shrink-0">
-                          {member.last_seen_date ? new Date(member.last_seen_date).toLocaleDateString("fr-FR") : "Jamais"}
+                          {member.last_seen_date
+                            ? new Date(
+                                member.last_seen_date,
+                              ).toLocaleDateString("fr-FR")
+                            : "Jamais"}
                         </span>
                       </div>
                     </div>
@@ -593,21 +719,29 @@ export default function MembersPage() {
                       onClick={() => handleReintegrateMember(member.id)}
                       className="flex-1 px-3 py-2.5 rounded-xl text-xs font-black bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-500/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap"
                     >
-                      <span className="material-symbols-outlined text-[16px]">restore_from_trash</span> Réintégrer
+                      <span className="material-symbols-outlined text-[16px]">
+                        restore_from_trash
+                      </span>{" "}
+                      Réintégrer
                     </button>
                     <button
                       onClick={() => handlePermanentDelete(member.id)}
                       className="flex-1 px-3 py-2.5 rounded-xl text-xs font-bold bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 transition-colors flex items-center justify-center gap-1 cursor-pointer whitespace-nowrap"
                       title="Supprimer définitivement tout de suite"
                     >
-                      <span className="material-symbols-outlined text-[16px]">delete_forever</span> Supprimer
+                      <span className="material-symbols-outlined text-[16px]">
+                        delete_forever
+                      </span>{" "}
+                      Supprimer
                     </button>
                   </div>
                 ) : (
                   <div className="pt-2 space-y-3">
                     <div>
                       <div className="flex items-center justify-between mb-1.5">
-                        <span className="text-[10px] font-label-caps font-extrabold text-slate-500 uppercase tracking-wider truncate">Classe spirituelle :</span>
+                        <span className="text-[10px] font-label-caps font-extrabold text-slate-500 uppercase tracking-wider truncate">
+                          Classe spirituelle :
+                        </span>
                         {editingClassId === member.id ? (
                           <button
                             onClick={() => setEditingClassId(null)}
@@ -628,19 +762,25 @@ export default function MembersPage() {
                       {editingClassId === member.id ? (
                         <div className="grid grid-cols-2 gap-1.5 mt-2 bg-slate-50 p-2 rounded-xl border border-slate-200/80 shadow-sm">
                           <button
-                            onClick={() => handleUpdateClass(member.id, "tuesday_class")}
+                            onClick={() =>
+                              handleUpdateClass(member.id, "tuesday_class")
+                            }
                             className="px-2 py-1.5 rounded-lg text-xs font-bold bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 transition-colors cursor-pointer truncate"
                           >
                             Mardi
                           </button>
                           <button
-                            onClick={() => handleUpdateClass(member.id, "wednesday_class")}
+                            onClick={() =>
+                              handleUpdateClass(member.id, "wednesday_class")
+                            }
                             className="px-2 py-1.5 rounded-lg text-xs font-bold bg-purple-50 text-purple-700 hover:bg-purple-100 border border-purple-200 transition-colors cursor-pointer truncate"
                           >
                             Mercredi
                           </button>
                           <button
-                            onClick={() => handleUpdateClass(member.id, "completed")}
+                            onClick={() =>
+                              handleUpdateClass(member.id, "completed")
+                            }
                             className="px-2 py-1.5 rounded-lg text-xs font-bold bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 transition-colors cursor-pointer truncate"
                           >
                             Terminé ✓
@@ -657,15 +797,21 @@ export default function MembersPage() {
                           <div className="min-w-0 flex-1 truncate">
                             {getClassBadge(member.current_class)}
                           </div>
-                          {member.current_class !== "completed" && member.current_class !== "none" && (
-                            <button
-                              onClick={() => handleUpdateClass(member.id, "completed")}
-                              title="Promouvoir comme classe terminée"
-                              className="text-[11px] font-black text-emerald-700 hover:bg-emerald-100/80 px-2.5 py-1 rounded-xl border border-transparent hover:border-emerald-300 transition-all shadow-2xs cursor-pointer whitespace-nowrap shrink-0 flex items-center gap-1"
-                            >
-                              <span className="material-symbols-outlined text-[14px]">school</span> Diplômer ✓
-                            </button>
-                          )}
+                          {member.current_class !== "completed" &&
+                            member.current_class !== "none" && (
+                              <button
+                                onClick={() =>
+                                  handleUpdateClass(member.id, "completed")
+                                }
+                                title="Promouvoir comme classe terminée"
+                                className="text-[11px] font-black text-emerald-700 hover:bg-emerald-100/80 px-2.5 py-1 rounded-xl border border-transparent hover:border-emerald-300 transition-all shadow-2xs cursor-pointer whitespace-nowrap shrink-0 flex items-center gap-1"
+                              >
+                                <span className="material-symbols-outlined text-[14px]">
+                                  school
+                                </span>{" "}
+                                Diplômer ✓
+                              </button>
+                            )}
                         </div>
                       )}
                     </div>
@@ -676,18 +822,28 @@ export default function MembersPage() {
                         className="flex-1 py-2 px-3 rounded-xl text-xs font-bold bg-slate-100/80 hover:bg-indigo-50 text-slate-700 hover:text-[#1e1b4b] border border-slate-200/80 hover:border-indigo-200 transition-all flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap shadow-2xs"
                         title="Modifier les informations ou le statut"
                       >
-                        <span className="material-symbols-outlined text-[15px]">edit</span> Modifier
+                        <span className="material-symbols-outlined text-[15px]">
+                          edit
+                        </span>{" "}
+                        Modifier
                       </button>
                       <button
                         onClick={() => {
-                          if (confirm(`Êtes-vous sûr de vouloir archiver ${member.first_name} ${member.last_name} ? Ce fidèle ne sera plus suivi activement et sera définitivement supprimé dans 90 jours s'il n'est pas réintégré.`)) {
+                          if (
+                            confirm(
+                              `Êtes-vous sûr de vouloir archiver ${member.first_name} ${member.last_name} ? Ce fidèle ne sera plus suivi activement et sera définitivement supprimé dans 90 jours s'il n'est pas réintégré.`,
+                            )
+                          ) {
                             handleArchiveMember(member.id);
                           }
                         }}
                         className="flex-1 py-2 px-3 rounded-xl text-xs font-bold bg-amber-50/80 hover:bg-amber-100 text-amber-800 hover:text-amber-900 border border-amber-200 hover:border-amber-300 transition-all flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap shadow-2xs"
                         title="Archiver ce fidèle (Purgatoire 90 jours)"
                       >
-                        <span className="material-symbols-outlined text-[15px]">archive</span> Archiver
+                        <span className="material-symbols-outlined text-[15px]">
+                          archive
+                        </span>{" "}
+                        Archiver
                       </button>
                     </div>
                   </div>
@@ -705,11 +861,19 @@ export default function MembersPage() {
           >
             <div className="flex items-center gap-3">
               <span className="text-xs font-bold text-slate-600">
-                Affichage <span className="text-indigo-600 font-black">{(currentPage - 1) * itemsPerPage + 1}</span> à{" "}
+                Affichage{" "}
+                <span className="text-indigo-600 font-black">
+                  {(currentPage - 1) * itemsPerPage + 1}
+                </span>{" "}
+                à{" "}
                 <span className="text-indigo-600 font-black">
                   {Math.min(currentPage * itemsPerPage, filteredMembers.length)}
                 </span>{" "}
-                sur <span className="text-slate-900 font-black">{filteredMembers.length}</span> fidèles
+                sur{" "}
+                <span className="text-slate-900 font-black">
+                  {filteredMembers.length}
+                </span>{" "}
+                fidèles
               </span>
               <div className="h-4 w-[1px] bg-slate-200 hidden sm:block" />
               <select
@@ -738,22 +902,24 @@ export default function MembersPage() {
               </button>
 
               <div className="flex items-center gap-1">
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
-                  <button
-                    key={pageNum}
-                    onClick={() => {
-                      setCurrentPage(pageNum);
-                      window.scrollTo({ top: 0, behavior: "smooth" });
-                    }}
-                    className={`w-9 h-9 rounded-2xl text-xs font-black transition-all flex items-center justify-center cursor-pointer ${
-                      currentPage === pageNum
-                        ? "bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md shadow-indigo-500/30 scale-105"
-                        : "bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200"
-                    }`}
-                  >
-                    {pageNum}
-                  </button>
-                ))}
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                  (pageNum) => (
+                    <button
+                      key={pageNum}
+                      onClick={() => {
+                        setCurrentPage(pageNum);
+                        window.scrollTo({ top: 0, behavior: "smooth" });
+                      }}
+                      className={`w-9 h-9 rounded-2xl text-xs font-black transition-all flex items-center justify-center cursor-pointer ${
+                        currentPage === pageNum
+                          ? "bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md shadow-indigo-500/30 scale-105"
+                          : "bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200"
+                      }`}
+                    >
+                      {pageNum}
+                    </button>
+                  ),
+                )}
               </div>
 
               <button
@@ -771,7 +937,11 @@ export default function MembersPage() {
         )}
 
         {/* Unified Modal (Create & Edit) */}
-        <Modal open={modalMode !== null} onClose={() => setModalMode(null)}>
+        <Modal
+          open={modalMode !== null}
+          onClose={() => setModalMode(null)}
+          maxWidth="max-w-3xl"
+        >
           {modalMode !== null && (
             <div className="space-y-5">
               <div className="flex items-center gap-2.5 mb-2">
@@ -781,7 +951,9 @@ export default function MembersPage() {
                   </span>
                 </div>
                 <h2 className="text-xl font-headline-md font-extrabold text-[#1e1b4b]">
-                  {modalMode === "create" ? "Inscrire une nouvelle âme" : "Modifier les informations & statut"}
+                  {modalMode === "create"
+                    ? "Inscrire une nouvelle âme"
+                    : "Modifier les informations & statut"}
                 </h2>
               </div>
               <p className="text-xs font-medium text-slate-500 mb-6">
@@ -794,11 +966,13 @@ export default function MembersPage() {
                 {/* Section Informations personnelles */}
                 <div className="space-y-4">
                   <h3 className="text-xs font-label-caps font-extrabold text-[#1e1b4b] uppercase tracking-wider border-b border-indigo-100/80 pb-2 flex items-center gap-1.5">
-                    <span className="material-symbols-outlined text-[15px] text-[#fea619]">badge</span>
+                    <span className="material-symbols-outlined text-[15px] text-[#fea619]">
+                      badge
+                    </span>
                     1. Coordonnées & Assignation
                   </h3>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-xs font-label-caps font-extrabold uppercase tracking-wider text-slate-600 mb-1.5">
                         Prénom
@@ -808,7 +982,12 @@ export default function MembersPage() {
                         required
                         placeholder="Jean"
                         value={currentMember.first_name}
-                        onChange={(e) => setCurrentMember({ ...currentMember, first_name: e.target.value })}
+                        onChange={(e) =>
+                          setCurrentMember({
+                            ...currentMember,
+                            first_name: e.target.value,
+                          })
+                        }
                         className="w-full px-4 py-3 rounded-2xl bg-slate-50/90 border border-slate-200/80 text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#1e1b4b]/20 focus:border-[#1e1b4b] focus:bg-white transition-all shadow-2xs"
                       />
                     </div>
@@ -821,88 +1000,126 @@ export default function MembersPage() {
                         required
                         placeholder="Dupont"
                         value={currentMember.last_name}
-                        onChange={(e) => setCurrentMember({ ...currentMember, last_name: e.target.value })}
+                        onChange={(e) =>
+                          setCurrentMember({
+                            ...currentMember,
+                            last_name: e.target.value,
+                          })
+                        }
                         className="w-full px-4 py-3 rounded-2xl bg-slate-50/90 border border-slate-200/80 text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#1e1b4b]/20 focus:border-[#1e1b4b] focus:bg-white transition-all shadow-2xs"
                       />
                     </div>
                   </div>
 
-                  <div>
-                    <label className="block text-xs font-label-caps font-extrabold uppercase tracking-wider text-slate-600 mb-1.5">
-                      Téléphone / WhatsApp
-                    </label>
-                    <input
-                      type="tel"
-                      placeholder="+33 6 00 00 00 00"
-                      value={currentMember.phone}
-                      onChange={(e) => setCurrentMember({ ...currentMember, phone: e.target.value })}
-                      className="w-full px-4 py-3 rounded-2xl bg-slate-50/90 border border-slate-200/80 text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#1e1b4b]/20 focus:border-[#1e1b4b] focus:bg-white transition-all shadow-2xs"
-                    />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-label-caps font-extrabold uppercase tracking-wider text-slate-600 mb-1.5">
+                        Téléphone / WhatsApp
+                      </label>
+                      <input
+                        type="tel"
+                        placeholder="+33 6 00 00 00 00"
+                        value={currentMember.phone}
+                        onChange={(e) =>
+                          setCurrentMember({
+                            ...currentMember,
+                            phone: e.target.value,
+                          })
+                        }
+                        className="w-full px-4 py-3 rounded-2xl bg-slate-50/90 border border-slate-200/80 text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#1e1b4b]/20 focus:border-[#1e1b4b] focus:bg-white transition-all shadow-2xs"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-label-caps font-extrabold uppercase tracking-wider text-slate-600 mb-1.5">
+                        Berger Responsable
+                      </label>
+                      <select
+                        value={currentMember.shepherd_id}
+                        onChange={(e) =>
+                          setCurrentMember({
+                            ...currentMember,
+                            shepherd_id: e.target.value,
+                          })
+                        }
+                        className="w-full px-4 py-3 rounded-2xl bg-slate-50/90 border border-slate-200/80 text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#1e1b4b]/20 focus:border-[#1e1b4b] focus:bg-white transition-all shadow-2xs cursor-pointer"
+                      >
+                        <option value="">Sélectionner un berger...</option>
+                        {shepherds.map((s) => (
+                          <option key={s.id} value={s.id}>
+                            {s.first_name} {s.last_name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
 
-                  <div>
-                    <label className="block text-xs font-label-caps font-extrabold uppercase tracking-wider text-slate-600 mb-1.5">
-                      Berger Responsable
-                    </label>
-                    <select
-                      value={currentMember.shepherd_id}
-                      onChange={(e) => setCurrentMember({ ...currentMember, shepherd_id: e.target.value })}
-                      className="w-full px-4 py-3 rounded-2xl bg-slate-50/90 border border-slate-200/80 text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#1e1b4b]/20 focus:border-[#1e1b4b] focus:bg-white transition-all shadow-2xs cursor-pointer"
-                    >
-                      <option value="">Sélectionner un berger...</option>
-                      {shepherds.map((s) => (
-                        <option key={s.id} value={s.id}>
-                          {s.first_name} {s.last_name}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-label-caps font-extrabold uppercase tracking-wider text-slate-600 mb-1.5">
+                        Invité(e) par (Parrain / Marraine)
+                      </label>
+                      <select
+                        value={currentMember.invited_by_member_id}
+                        onChange={(e) =>
+                          setCurrentMember({
+                            ...currentMember,
+                            invited_by_member_id: e.target.value,
+                          })
+                        }
+                        className="w-full px-4 py-3 rounded-2xl bg-slate-50/90 border border-slate-200/80 text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#1e1b4b]/20 focus:border-[#1e1b4b] focus:bg-white transition-all shadow-2xs cursor-pointer"
+                      >
+                        <option value="">Aucun parrain / marraine</option>
+                        {allMembers.map((m) => (
+                          <option key={m.id} value={m.id}>
+                            {m.first_name} {m.last_name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-label-caps font-extrabold uppercase tracking-wider text-slate-600 mb-1.5">
+                        Classe d&apos;enseignement spirituel
+                      </label>
+                      <select
+                        value={currentMember.current_class}
+                        onChange={(e) =>
+                          setCurrentMember({
+                            ...currentMember,
+                            current_class: e.target
+                              .value as Member["current_class"],
+                          })
+                        }
+                        className="w-full px-4 py-3 rounded-2xl bg-slate-50/90 border border-slate-200/80 text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#1e1b4b]/20 focus:border-[#1e1b4b] focus:bg-white transition-all shadow-2xs cursor-pointer"
+                      >
+                        <option value="none">
+                          Aucune classe pour l&apos;instant
                         </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-label-caps font-extrabold uppercase tracking-wider text-slate-600 mb-1.5">
-                      Invité(e) par (Parrain / Marraine)
-                    </label>
-                    <select
-                      value={currentMember.invited_by_member_id}
-                      onChange={(e) => setCurrentMember({ ...currentMember, invited_by_member_id: e.target.value })}
-                      className="w-full px-4 py-3 rounded-2xl bg-slate-50/90 border border-slate-200/80 text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#1e1b4b]/20 focus:border-[#1e1b4b] focus:bg-white transition-all shadow-2xs cursor-pointer"
-                    >
-                      <option value="">Aucun parrain / marraine</option>
-                      {allMembers.map((m) => (
-                        <option key={m.id} value={m.id}>
-                          {m.first_name} {m.last_name}
+                        <option value="tuesday_class">Classe du Mardi</option>
+                        <option value="wednesday_class">
+                          Classe du Mercredi
                         </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-label-caps font-extrabold uppercase tracking-wider text-slate-600 mb-1.5">
-                      Classe d&apos;enseignement spirituel
-                    </label>
-                    <select
-                      value={currentMember.current_class}
-                      onChange={(e) => setCurrentMember({ ...currentMember, current_class: e.target.value as Member["current_class"] })}
-                      className="w-full px-4 py-3 rounded-2xl bg-slate-50/90 border border-slate-200/80 text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#1e1b4b]/20 focus:border-[#1e1b4b] focus:bg-white transition-all shadow-2xs cursor-pointer"
-                    >
-                      <option value="none">Aucune classe pour l&apos;instant</option>
-                      <option value="tuesday_class">Classe du Mardi</option>
-                      <option value="wednesday_class">Classe du Mercredi</option>
-                      <option value="completed">Classes Terminées ✓</option>
-                    </select>
+                        <option value="completed">Classes Terminées ✓</option>
+                      </select>
+                    </div>
                   </div>
                 </div>
 
                 {/* Section Statut spirituel */}
                 <div className="space-y-3 pt-2">
                   <h3 className="text-xs font-label-caps font-extrabold text-[#1e1b4b] uppercase tracking-wider border-b border-indigo-100/80 pb-2 flex items-center gap-1.5">
-                    <span className="material-symbols-outlined text-[15px] text-[#fea619]">church</span>
+                    <span className="material-symbols-outlined text-[15px] text-[#fea619]">
+                      church
+                    </span>
                     2. Statut Spirituel & Cycle d&apos;Intégration
                   </h3>
 
-                  <div className="grid grid-cols-1 gap-2.5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                     <label
-                      onClick={() => setCurrentMember({ ...currentMember, status: "new" })}
+                      onClick={() =>
+                        setCurrentMember({ ...currentMember, status: "new" })
+                      }
                       className={`flex items-start gap-3 p-3.5 rounded-2xl border cursor-pointer transition-all ${
                         currentMember.status === "new"
                           ? "bg-indigo-50/90 border-indigo-300 ring-2 ring-indigo-500/20 shadow-sm"
@@ -913,7 +1130,9 @@ export default function MembersPage() {
                         type="radio"
                         name="member_status"
                         checked={currentMember.status === "new"}
-                        onChange={() => setCurrentMember({ ...currentMember, status: "new" })}
+                        onChange={() =>
+                          setCurrentMember({ ...currentMember, status: "new" })
+                        }
                         className="mt-0.5 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
                       />
                       <div>
@@ -921,13 +1140,19 @@ export default function MembersPage() {
                           🌟 Nouveau (Dimanche 1)
                         </div>
                         <p className="text-[11px] text-slate-500 font-medium mt-0.5">
-                          Première visite ou prise de contact récente. Débute le cycle de 4 dimanches.
+                          Première visite ou prise de contact récente. Débute le
+                          cycle de 4 dimanches.
                         </p>
                       </div>
                     </label>
 
                     <label
-                      onClick={() => setCurrentMember({ ...currentMember, status: "in_integration" })}
+                      onClick={() =>
+                        setCurrentMember({
+                          ...currentMember,
+                          status: "in_integration",
+                        })
+                      }
                       className={`flex items-start gap-3 p-3.5 rounded-2xl border cursor-pointer transition-all ${
                         currentMember.status === "in_integration"
                           ? "bg-purple-50/90 border-purple-300 ring-2 ring-purple-500/20 shadow-sm"
@@ -938,7 +1163,12 @@ export default function MembersPage() {
                         type="radio"
                         name="member_status"
                         checked={currentMember.status === "in_integration"}
-                        onChange={() => setCurrentMember({ ...currentMember, status: "in_integration" })}
+                        onChange={() =>
+                          setCurrentMember({
+                            ...currentMember,
+                            status: "in_integration",
+                          })
+                        }
                         className="mt-0.5 text-purple-600 focus:ring-purple-500 cursor-pointer"
                       />
                       <div>
@@ -946,13 +1176,16 @@ export default function MembersPage() {
                           🔄 En Intégration (Dimanches 2 à 4)
                         </div>
                         <p className="text-[11px] text-slate-500 font-medium mt-0.5">
-                          En cours d&apos;enracinement et d&apos;assiduité dans l&apos;assemblée.
+                          En cours d&apos;enracinement et d&apos;assiduité dans
+                          l&apos;assemblée.
                         </p>
                       </div>
                     </label>
 
                     <label
-                      onClick={() => setCurrentMember({ ...currentMember, status: "member" })}
+                      onClick={() =>
+                        setCurrentMember({ ...currentMember, status: "member" })
+                      }
                       className={`flex items-start gap-3 p-3.5 rounded-2xl border cursor-pointer transition-all ${
                         currentMember.status === "member"
                           ? "bg-emerald-50/90 border-emerald-300 ring-2 ring-emerald-500/20 shadow-sm"
@@ -963,7 +1196,12 @@ export default function MembersPage() {
                         type="radio"
                         name="member_status"
                         checked={currentMember.status === "member"}
-                        onChange={() => setCurrentMember({ ...currentMember, status: "member" })}
+                        onChange={() =>
+                          setCurrentMember({
+                            ...currentMember,
+                            status: "member",
+                          })
+                        }
                         className="mt-0.5 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
                       />
                       <div>
@@ -971,14 +1209,20 @@ export default function MembersPage() {
                           ✨ Membre Intégré
                         </div>
                         <p className="text-[11px] text-slate-500 font-medium mt-0.5">
-                          Fidèle assidu, enraciné dans l&apos;église, ayant validé son intégration.
+                          Fidèle assidu, enraciné dans l&apos;église, ayant
+                          validé son intégration.
                         </p>
                       </div>
                     </label>
 
                     {modalMode === "edit" && (
                       <label
-                        onClick={() => setCurrentMember({ ...currentMember, status: "absent_to_relaunch" })}
+                        onClick={() =>
+                          setCurrentMember({
+                            ...currentMember,
+                            status: "absent_to_relaunch",
+                          })
+                        }
                         className={`flex items-start gap-3 p-3.5 rounded-2xl border cursor-pointer transition-all ${
                           currentMember.status === "absent_to_relaunch"
                             ? "bg-rose-50/90 border-rose-300 ring-2 ring-rose-500/20 shadow-sm"
@@ -988,8 +1232,15 @@ export default function MembersPage() {
                         <input
                           type="radio"
                           name="member_status"
-                          checked={currentMember.status === "absent_to_relaunch"}
-                          onChange={() => setCurrentMember({ ...currentMember, status: "absent_to_relaunch" })}
+                          checked={
+                            currentMember.status === "absent_to_relaunch"
+                          }
+                          onChange={() =>
+                            setCurrentMember({
+                              ...currentMember,
+                              status: "absent_to_relaunch",
+                            })
+                          }
                           className="mt-0.5 text-rose-600 focus:ring-rose-500 cursor-pointer"
                         />
                         <div>
@@ -997,7 +1248,8 @@ export default function MembersPage() {
                             ⚠️ Absent à relancer
                           </div>
                           <p className="text-[11px] text-rose-600/90 font-medium mt-0.5">
-                            Fidèle n&apos;étant plus venu depuis 2 dimanches consécutifs ou plus.
+                            Fidèle n&apos;étant plus venu depuis 2 dimanches
+                            consécutifs ou plus.
                           </p>
                         </div>
                       </label>
@@ -1005,21 +1257,28 @@ export default function MembersPage() {
                   </div>
                 </div>
 
-                {modalMode === "edit" && currentMember.id && currentMember.status !== "archived" && (
-                  <div className="pt-3 border-t border-slate-100/80 flex items-center justify-between">
-                    <span className="text-xs font-semibold text-slate-600">Cette âme ne suit plus l&apos;église ?</span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        handleArchiveMember(currentMember.id!);
-                        setModalMode(null);
-                      }}
-                      className="px-3.5 py-2 rounded-xl text-xs font-bold text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-300 transition-colors cursor-pointer flex items-center gap-1.5 shadow-2xs"
-                    >
-                      <span className="material-symbols-outlined text-[15px]">archive</span> Archiver ce fidèle
-                    </button>
-                  </div>
-                )}
+                {modalMode === "edit" &&
+                  currentMember.id &&
+                  currentMember.status !== "archived" && (
+                    <div className="pt-3 border-t border-slate-100/80 flex items-center justify-between">
+                      <span className="text-xs font-semibold text-slate-600">
+                        Cette âme ne suit plus l&apos;église ?
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          handleArchiveMember(currentMember.id!);
+                          setModalMode(null);
+                        }}
+                        className="px-3.5 py-2 rounded-xl text-xs font-bold text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-300 transition-colors cursor-pointer flex items-center gap-1.5 shadow-2xs"
+                      >
+                        <span className="material-symbols-outlined text-[15px]">
+                          archive
+                        </span>{" "}
+                        Archiver ce fidèle
+                      </button>
+                    </div>
+                  )}
 
                 <div className="pt-4 flex items-center justify-end gap-3 border-t border-slate-100/80">
                   <button
@@ -1037,8 +1296,8 @@ export default function MembersPage() {
                     {saving
                       ? "Enregistrement..."
                       : modalMode === "create"
-                      ? "Inscrire l'âme"
-                      : "Enregistrer les modifications"}
+                        ? "Inscrire l'âme"
+                        : "Enregistrer les modifications"}
                   </button>
                 </div>
               </form>

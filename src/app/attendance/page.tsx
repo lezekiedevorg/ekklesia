@@ -1,11 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import PageLoader from "@/components/common/PageLoader";
+import { hasGlobalScope, hasOwnScope } from "@/lib/auth/roles";
 import { createClient } from "@/lib/supabase/client";
-import Navbar from "@/components/layout/Navbar";
 import { useRouter } from "next/navigation";
-import { formatWeekInterval } from "@/lib/utils/dateFormatter";
 import WeekSelector from "@/components/common/WeekSelector";
+import { getProgramsClient } from "@/lib/utils/programs-data";
+import { PROGRAM_DEFINITIONS, ProgramDefinition } from "@/lib/constants/programs";
 
 interface Member {
   id: string;
@@ -28,7 +30,7 @@ interface Profile {
   groups?: { name: string } | null;
 }
 
-type ProgramType = "tuesday_class" | "wednesday_class" | "thursday_online" | "friday_service" | "sunday_service";
+type ProgramType = string;
 
 export default function AttendancePage() {
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -40,14 +42,19 @@ export default function AttendancePage() {
   // Program selection & Date
   const [selectedProgram, setSelectedProgram] = useState<ProgramType>("sunday_service");
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split("T")[0]);
+  const [programs, setPrograms] = useState<ProgramDefinition[]>(PROGRAM_DEFINITIONS);
 
-  // View state machine: start -> wizard -> summary
-  const [viewMode, setViewMode] = useState<"start" | "wizard" | "summary">("start");
+  useEffect(() => {
+    getProgramsClient().then(setPrograms);
+  }, []);
+
+  // Liste rapide par défaut, pas-à-pas en option
+  const [viewMode, setViewMode] = useState<"list" | "wizard">("list");
   const [currentIndex, setCurrentIndex] = useState(0);
 
   // Attendance state: member_id -> boolean
   const [attendanceState, setAttendanceState] = useState<Record<string, boolean>>({});
-  // Absence reason state for Sunday: member_id -> reason
+  // Motif d'absence (tous programmes) : member_id -> motif
   const [absenceReasons, setAbsenceReasons] = useState<Record<string, string>>({});
 
   const supabase = createClient();
@@ -77,7 +84,7 @@ export default function AttendancePage() {
 
         // Fetch members for this user/group
         let query = supabase.from("members").select("*").is("archived_at", null).neq("status", "archived").order("first_name", { ascending: true });
-        if (prof.role === "shepherd") {
+        if (hasOwnScope(prof.role)) {
           query = query.eq("shepherd_id", user.id);
         } else if (prof.role === "leader") {
           const { data: grpShepherds } = await supabase
@@ -116,18 +123,17 @@ export default function AttendancePage() {
         });
         setAttendanceState(newAttState);
 
-        if (selectedProgram === "sunday_service") {
-          const { data: existingAbs } = await supabase
-            .from("sunday_absences")
-            .select("member_id, reason")
-            .eq("date", selectedDate);
-          
-          const newReasons: Record<string, string> = {};
-          existingAbs?.forEach((rec) => {
-            newReasons[rec.member_id] = rec.reason;
-          });
-          setAbsenceReasons(newReasons);
-        }
+        const { data: existingAbs } = await supabase
+          .from("sunday_absences")
+          .select("member_id, reason")
+          .eq("date", selectedDate)
+          .eq("program_type", selectedProgram);
+
+        const newReasons: Record<string, string> = {};
+        existingAbs?.forEach((rec) => {
+          newReasons[rec.member_id] = rec.reason;
+        });
+        setAbsenceReasons(newReasons);
       } catch (err) {
         console.error("Erreur de chargement du détail de présence:", err);
       }
@@ -137,25 +143,23 @@ export default function AttendancePage() {
 
   // Reset view mode when date or program changes
   useEffect(() => {
-    setViewMode("start");
+    setViewMode("list");
     setMessage(null);
   }, [selectedDate, selectedProgram]);
 
   // Filter out archived members and match program rules
   const eligibleMembers = members.filter((m) => {
     if (m.archived_at) return false;
-    if (selectedProgram === "tuesday_class") {
-      return m.current_class === "tuesday_class";
+    const prog = programs.find((p) => p.id === selectedProgram);
+    if (prog?.eligibility_class) {
+      return m.current_class === prog.eligibility_class;
     }
-    if (selectedProgram === "wednesday_class") {
-      return m.current_class === "wednesday_class";
-    }
-    return true; // Thursday online, Friday, Sunday show everyone
+    return true; // programmes ouverts à tous
   });
 
   // Calculate 7-day lock
   const isLocked = (() => {
-    if (profile?.role === "pastor") return false;
+    if (hasGlobalScope(profile?.role)) return false;
     const now = new Date();
     const sel = new Date(selectedDate + "T00:00:00");
     const diffTime = now.getTime() - sel.getTime();
@@ -167,7 +171,7 @@ export default function AttendancePage() {
     if (currentIndex < eligibleMembers.length - 1) {
       setCurrentIndex((prev) => prev + 1);
     } else {
-      setViewMode("summary");
+      setViewMode("list");
     }
   };
 
@@ -176,17 +180,12 @@ export default function AttendancePage() {
       ...prev,
       [memberId]: present,
     }));
-    if (present || selectedProgram !== "sunday_service") {
-      advanceWizard();
-    }
+    if (present) advanceWizard();
   };
 
-  const handleQuickToggle = (memberId: string, currentVal?: boolean) => {
+  const handleQuickSet = (memberId: string, present: boolean) => {
     if (isLocked) return;
-    setAttendanceState((prev) => ({
-      ...prev,
-      [memberId]: !currentVal,
-    }));
+    setAttendanceState((prev) => ({ ...prev, [memberId]: present }));
   };
 
   const handleSelectAll = (present: boolean) => {
@@ -216,21 +215,19 @@ export default function AttendancePage() {
 
       if (error) throw error;
 
-      if (selectedProgram === "sunday_service") {
-        const absentees = eligibleMembers.filter((m) => !attendanceState[m.id]);
-        const absRecords = absentees
-          .filter((m) => absenceReasons[m.id]?.trim())
-          .map((m) => ({
-            member_id: m.id,
-            date: selectedDate,
-            reason: absenceReasons[m.id] || "Absence non justifiée",
-          }));
+      const absRecords = eligibleMembers
+        .filter((m) => !attendanceState[m.id] && absenceReasons[m.id]?.trim())
+        .map((m) => ({
+          member_id: m.id,
+          date: selectedDate,
+          program_type: selectedProgram,
+          reason: absenceReasons[m.id],
+        }));
 
-        if (absRecords.length > 0) {
-          await supabase
-            .from("sunday_absences")
-            .upsert(absRecords, { onConflict: "member_id,date" });
-        }
+      if (absRecords.length > 0) {
+        await supabase
+          .from("sunday_absences")
+          .upsert(absRecords, { onConflict: "member_id,date,program_type" });
       }
 
       setMessage("Présences enregistrées avec succès ! Les compteurs d'intégration et statuts ont été mis à jour.");
@@ -253,40 +250,32 @@ export default function AttendancePage() {
     }
   };
 
-  const programOptions: { id: ProgramType; label: string; desc: string; icon: string }[] = [
-    { id: "sunday_service", label: "Dimanche (Culte)", desc: "Tout le monde convié • Déclenche la règle des 4 dimanches", icon: "🌞" },
-    { id: "tuesday_class", label: "Mardi (Classe)", desc: "Réservé aux membres de la classe du mardi", icon: "📖" },
-    { id: "wednesday_class", label: "Mercredi (Classe)", desc: "Réservé aux membres de la classe du mercredi", icon: "🕯️" },
-    { id: "thursday_online", label: "Jeudi (En ligne)", desc: "Prière en ligne • Tout le monde convié", icon: "🌐" },
-    { id: "friday_service", label: "Vendredi (Culte)", desc: "Culte / Veillée • Tout le monde convié", icon: "🔥" },
-  ];
+  const programOptions: { id: ProgramType; label: string; desc: string; icon: string }[] = programs.map((p) => ({
+    id: p.id,
+    label: p.label,
+    desc: p.eligibility_class
+      ? "Réservé aux membres de cette classe"
+      : p.id === "sunday_service"
+      ? "Tout le monde convié • Déclenche la règle des 4 dimanches"
+      : "Tout le monde convié",
+    icon: p.icon,
+  }));
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-[#f8fafc] to-[#f1f5f9] flex items-center justify-center text-[#1e1b4b]">
-        <div className="glass-panel px-8 py-6 rounded-3xl shadow-xl flex items-center gap-4 border border-white/80 font-bold text-sm">
-          <div className="w-6 h-6 rounded-full border-3 border-indigo-600 border-t-transparent animate-spin" />
-          <span>Chargement des listes de présence...</span>
-        </div>
-      </div>
-    );
+    return <PageLoader label="Chargement des listes de présence..." />;
   }
 
   const activeMember = eligibleMembers[currentIndex] || eligibleMembers[0];
-  const presentCount = eligibleMembers.filter((m) => attendanceState[m.id]).length;
-  const absentCount = eligibleMembers.length - presentCount;
+  const presentCount = eligibleMembers.filter((m) => attendanceState[m.id] === true).length;
+  const markedAbsentCount = eligibleMembers.filter((m) => attendanceState[m.id] === false).length;
+  const pendingCount = eligibleMembers.length - presentCount - markedAbsentCount;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-[#f8fafc] to-[#f1f5f9] text-[#1e1b4b] pb-24 font-sans selection:bg-[#fea619]/20">
-      <Navbar
-        role={profile?.role || "shepherd"}
-        groupName={profile?.groups?.name}
-        userName={profile ? `${profile.first_name} ${profile.last_name}` : undefined}
-      />
 
       <main className="max-w-6xl mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
         {/* Header Section */}
-        <div className="glass-panel p-6 sm:p-8 rounded-3xl shadow-md border border-white/80 relative overflow-hidden">
+        <div className="glass-panel p-5 sm:p-6 rounded-3xl shadow-md border border-white/80 relative overflow-hidden">
           <div className="absolute top-0 right-0 w-80 h-80 bg-gradient-to-bl from-indigo-500/10 via-amber-500/5 to-transparent rounded-full blur-3xl pointer-events-none" />
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 relative z-10">
             <div>
@@ -294,12 +283,9 @@ export default function AttendancePage() {
                 <span className="material-symbols-outlined text-[15px] text-[#fea619]">event_available</span>
                 <span className="font-label-caps font-bold text-[11px] uppercase tracking-wider">Pointage & Présences</span>
               </div>
-              <h1 className="font-headline-md font-extrabold text-2xl sm:text-3xl lg:text-4xl text-[#1e1b4b] tracking-tight">
+              <h1 className="font-headline-md font-extrabold text-xl sm:text-2xl text-[#1e1b4b] tracking-tight">
                 Pointage des Présences
               </h1>
-              <p className="text-xs sm:text-sm text-[#47464f] mt-1 font-medium">
-                Sélectionnez le culte ou la classe, vérifiez les fidèles convoqués et enregistrez d&apos;un clic.
-              </p>
             </div>
 
             <div className="flex-shrink-0">
@@ -308,29 +294,22 @@ export default function AttendancePage() {
           </div>
 
           {/* Program Type Tabs */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5 mt-6 pt-6 border-t border-slate-200/60 relative z-10">
+          <div className="flex flex-wrap gap-2 mt-5 pt-5 border-t border-slate-200/60 relative z-10">
             {programOptions.map((prog) => {
               const isActive = selectedProgram === prog.id;
               return (
                 <button
                   key={prog.id}
                   onClick={() => setSelectedProgram(prog.id)}
-                  className={`p-4.5 rounded-2xl text-left transition-all duration-300 flex flex-col justify-between cursor-pointer ${
+                  title={prog.desc}
+                  className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 border ${
                     isActive
-                      ? "bg-gradient-to-br from-[#1e1b4b] via-[#2d2a6e] to-[#1e1b4b] text-white shadow-xl shadow-indigo-950/20 scale-[1.03] border border-[#fea619]/60"
-                      : "glass-panel-interactive text-slate-700 hover:text-[#1e1b4b]"
+                      ? "bg-[#1e1b4b] text-white border-[#fea619]/60 shadow-md shadow-indigo-950/20"
+                      : "bg-white/70 text-slate-600 border-slate-200/80 hover:border-indigo-300 hover:text-[#1e1b4b]"
                   }`}
                 >
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-2xl p-2 rounded-xl bg-white/40 backdrop-blur-md shadow-2xs">{prog.icon}</span>
-                    {isActive && <span className="w-2.5 h-2.5 rounded-full bg-[#fea619] shadow-md shadow-[#fea619]/50 animate-pulse" />}
-                  </div>
-                  <div>
-                    <div className="font-black text-xs sm:text-sm tracking-tight">{prog.label}</div>
-                    <div className={`text-[11px] mt-1 leading-tight font-medium line-clamp-2 ${isActive ? "text-indigo-200" : "text-slate-500"}`}>
-                      {prog.desc}
-                    </div>
-                  </div>
+                  <span>{prog.icon}</span>
+                  {prog.label}
                 </button>
               );
             })}
@@ -347,379 +326,280 @@ export default function AttendancePage() {
           </div>
         )}
 
-        {/* VIEW MODE: START */}
-        {viewMode === "start" && (
-          <div className="glass-panel rounded-3xl p-8 sm:p-14 text-center shadow-lg border border-white/80 space-y-7 relative overflow-hidden">
-            <div className="w-20 h-20 rounded-3xl bg-gradient-to-tr from-indigo-100 via-purple-50 to-amber-50 border border-indigo-200/60 flex items-center justify-center mx-auto text-indigo-700 shadow-lg shadow-indigo-500/10 transform hover:scale-105 transition-all">
-              <span className="text-4xl">📋</span>
-            </div>
-            <div className="max-w-md mx-auto space-y-2.5">
-              <h2 className="text-2xl sm:text-3xl font-black text-[#1e1b4b] tracking-tight">
-                {programOptions.find((p) => p.id === selectedProgram)?.label}
-              </h2>
-              <p className="text-xs sm:text-sm font-semibold text-slate-500 leading-relaxed">
-                {eligibleMembers.length === 0
-                  ? "Aucun fidèle actif assigné à ce programme pour ce groupe."
-                  : `${eligibleMembers.length} fidèle(s) actif(s) convié(s) pour le ${new Date(selectedDate).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}.`}
-              </p>
-            </div>
-
-            {isLocked ? (
-              <div className="max-w-md mx-auto p-5 rounded-3xl bg-amber-50/90 border border-amber-300 text-amber-900 space-y-3.5 shadow-md shadow-amber-500/10">
-                <div className="flex items-center justify-center gap-2 font-black text-sm text-amber-800">
-                  <span>🔒 Délai légal de 7 jours expiré</span>
-                </div>
-                <p className="text-xs font-semibold text-amber-700 leading-relaxed">
-                  Cette date dépasse le délai de 7 jours. La liste est en lecture seule pour préserver l&apos;intégrité de l&apos;historique pastoral.
-                </p>
-                <button
-                  onClick={() => setViewMode("summary")}
-                  className="w-full px-6 py-3.5 rounded-2xl font-black text-xs bg-amber-600 text-white hover:bg-amber-700 transition-all shadow-md shadow-amber-600/20 cursor-pointer"
-                >
-                  📋 Consulter le Rapport en Lecture Seule
-                </button>
+        {/* VUE LISTE RAPIDE (par défaut) */}
+        {viewMode === "list" && (
+          <div className="glass-panel rounded-3xl border border-white/80 shadow-md overflow-hidden animate-fadeIn">
+            {/* Barre de statut */}
+            <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4 border-b border-slate-200/70 bg-white/50">
+              <div className="flex items-center gap-2.5 text-xs font-bold">
+                <span className="text-slate-700">
+                  {eligibleMembers.length} convié{eligibleMembers.length > 1 ? "s" : ""}
+                </span>
+                <span className="px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">
+                  ✓ {presentCount}
+                </span>
+                <span className="px-2.5 py-1 rounded-full bg-rose-50 text-rose-800 border border-rose-200">
+                  ✕ {markedAbsentCount}
+                </span>
+                {pendingCount > 0 && (
+                  <span className="px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
+                    {pendingCount} à pointer
+                  </span>
+                )}
               </div>
-            ) : (
-              eligibleMembers.length > 0 && (
-                <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-3">
+
+              {!isLocked && eligibleMembers.length > 0 && (
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => handleSelectAll(true)}
+                    className="px-3 py-1.5 rounded-xl text-[11px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100 transition-colors cursor-pointer"
+                  >
+                    Tous présents
+                  </button>
+                  <button
+                    onClick={() => handleSelectAll(false)}
+                    className="px-3 py-1.5 rounded-xl text-[11px] font-bold bg-rose-50 text-rose-800 border border-rose-200 hover:bg-rose-100 transition-colors cursor-pointer"
+                  >
+                    Tous absents
+                  </button>
                   <button
                     onClick={() => {
                       setCurrentIndex(0);
                       setViewMode("wizard");
                     }}
-                    className="w-full sm:w-auto px-8 py-4.5 rounded-2xl font-black text-sm text-[#1e1b4b] bg-gradient-to-r from-[#fea619] via-[#ffb947] to-[#fea619] hover:from-amber-400 hover:to-amber-400 shadow-xl shadow-[#fea619]/25 transition-all transform hover:-translate-y-0.5 active:translate-y-0 flex items-center justify-center gap-2 cursor-pointer"
+                    className="px-3 py-1.5 rounded-xl text-[11px] font-bold bg-[#1e1b4b] text-white hover:bg-[#312e81] transition-colors cursor-pointer flex items-center gap-1.5"
                   >
-                    <span>🚀 Démarrer l&apos;appel pas-à-pas ({eligibleMembers.length} conviés)</span>
-                  </button>
-                  <button
-                    onClick={() => setViewMode("summary")}
-                    className="w-full sm:w-auto px-7 py-4.5 rounded-2xl font-black text-xs text-slate-700 bg-white/80 hover:bg-white transition-all border border-slate-200 shadow-md shadow-slate-200/50 flex items-center justify-center gap-2 cursor-pointer"
-                  >
-                    <span>📋 Voir la grille globale récapitulative</span>
+                    <span className="material-symbols-outlined text-[14px]">swipe_right</span>
+                    Mode pas-à-pas
                   </button>
                 </div>
-              )
+              )}
+            </div>
+
+            {isLocked && (
+              <div className="px-5 py-3 bg-amber-50/80 border-b border-amber-200 text-xs font-bold text-amber-900">
+                🔒 Délai de 7 jours expiré — liste en lecture seule.
+              </div>
             )}
+
+            {/* Grille : 2 à 3 colonnes pour éviter une liste interminable */}
+            <div className="p-3 sm:p-4 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2 items-start">
+              {eligibleMembers.map((member) => {
+                const state = attendanceState[member.id];
+                return (
+                  <div
+                    key={member.id}
+                    className={`rounded-2xl border p-2.5 transition-colors ${
+                      state === true
+                        ? "bg-emerald-50/50 border-emerald-200"
+                        : state === false
+                        ? "bg-rose-50/50 border-rose-200"
+                        : "bg-white/70 border-slate-200/80"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 shrink-0 rounded-lg bg-gradient-to-tr from-[#1e1b4b] to-[#4338ca] text-white text-[10px] font-black flex items-center justify-center">
+                        {member.first_name[0]}
+                        {member.last_name[0]}
+                      </div>
+
+                      <div className="min-w-0 flex-1">
+                        <div className="text-[13px] font-bold text-[#1e1b4b] truncate flex items-center gap-1">
+                          <span className="truncate">
+                            {member.first_name} {member.last_name}
+                          </span>
+                          {member.status === "new" && <span title="Nouveau">✨</span>}
+                          {member.status === "absent_to_relaunch" && <span title="À relancer">⚠️</span>}
+                        </div>
+                        <div className="text-[10px] font-medium text-slate-400 truncate">
+                          {member.phone || "Pas de téléphone"}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button
+                          onClick={() => handleQuickSet(member.id, true)}
+                          disabled={isLocked}
+                          title="Présent"
+                          className={`w-8 h-8 rounded-lg text-xs font-black border transition-all cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 ${
+                            state === true
+                              ? "bg-emerald-600 text-white border-emerald-600"
+                              : "bg-white text-slate-300 border-slate-200 hover:border-emerald-400 hover:text-emerald-600"
+                          }`}
+                        >
+                          ✓
+                        </button>
+                        <button
+                          onClick={() => handleQuickSet(member.id, false)}
+                          disabled={isLocked}
+                          title="Absent"
+                          className={`w-8 h-8 rounded-lg text-xs font-black border transition-all cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 ${
+                            state === false
+                              ? "bg-rose-600 text-white border-rose-600"
+                              : "bg-white text-slate-300 border-slate-200 hover:border-rose-400 hover:text-rose-600"
+                          }`}
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    </div>
+
+                    {state === false && (
+                      <input
+                        type="text"
+                        disabled={isLocked}
+                        placeholder="Motif (facultatif)..."
+                        value={absenceReasons[member.id] || ""}
+                        onChange={(e) => setAbsenceReasons({ ...absenceReasons, [member.id]: e.target.value })}
+                        className="mt-2 w-full px-2.5 py-1.5 rounded-lg bg-white border border-rose-200 text-[11px] font-semibold text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-rose-500/25"
+                      />
+                    )}
+                  </div>
+                );
+              })}
+
+              {eligibleMembers.length === 0 && (
+                <div className="col-span-full px-5 py-14 text-center text-xs font-semibold text-slate-400">
+                  Aucun fidèle convié à ce programme.
+                </div>
+              )}
+            </div>
+
           </div>
         )}
 
-        {/* VIEW MODE: WIZARD */}
+        {/* Barre d'enregistrement collée en bas : plus besoin de scroller pour valider */}
+        {viewMode === "list" && eligibleMembers.length > 0 && (
+          <div className="sticky bottom-4 z-20 flex justify-end">
+            <button
+              onClick={handleSaveAttendance}
+              disabled={saving || isLocked}
+              className="px-6 py-3 rounded-2xl font-black text-xs text-[#1e1b4b] bg-gradient-to-r from-[#fea619] to-[#ffb947] hover:from-amber-400 hover:to-amber-400 shadow-xl shadow-[#fea619]/30 transition-all disabled:opacity-40 disabled:shadow-none cursor-pointer disabled:cursor-not-allowed border border-white/60"
+            >
+              {saving ? "Enregistrement..." : `💾 Enregistrer l'appel (${presentCount + markedAbsentCount}/${eligibleMembers.length})`}
+            </button>
+          </div>
+        )}
+
+        {/* VUE PAS-À-PAS (compacte) */}
         {viewMode === "wizard" && activeMember && (
-          <div className="glass-panel rounded-3xl p-6 sm:p-10 shadow-2xl border border-white/80 space-y-8 animate-fadeIn relative overflow-hidden">
-            {/* Wizard Header Bar */}
-            <div className="flex items-center justify-between pb-6 border-b border-slate-200/60 gap-4">
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={() => {
-                    if (currentIndex > 0) setCurrentIndex((prev) => prev - 1);
-                  }}
-                  disabled={currentIndex === 0}
-                  className="px-4 py-2.5 rounded-2xl text-xs font-bold bg-slate-100 text-slate-700 hover:bg-slate-200 disabled:opacity-30 transition-all flex items-center gap-1.5 shadow-2xs cursor-pointer"
-                >
-                  ← Précédent
-                </button>
-                <div className="text-xs sm:text-sm font-black text-slate-700 bg-slate-50/80 px-3.5 py-2 rounded-2xl border border-slate-200/60">
-                  Fidèle <span className="text-[#1e1b4b] font-extrabold">{currentIndex + 1}</span> sur {eligibleMembers.length}
+          <div className="glass-panel rounded-3xl border border-white/80 shadow-md overflow-hidden animate-fadeIn max-w-xl mx-auto">
+            {/* En-tête */}
+            <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-slate-200/70 bg-white/50">
+              <button
+                onClick={() => setCurrentIndex((prev) => Math.max(0, prev - 1))}
+                disabled={currentIndex === 0}
+                className="w-8 h-8 rounded-xl text-sm font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 disabled:opacity-30 transition-colors cursor-pointer disabled:cursor-not-allowed"
+              >
+                ←
+              </button>
+              <div className="flex-1 flex items-center gap-3">
+                <span className="text-[11px] font-bold text-slate-500 whitespace-nowrap">
+                  {currentIndex + 1} / {eligibleMembers.length}
+                </span>
+                <div className="flex-1 h-1.5 rounded-full bg-slate-200 overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-gradient-to-r from-[#1e1b4b] to-[#fea619] transition-all duration-300"
+                    style={{ width: `${((currentIndex + 1) / eligibleMembers.length) * 100}%` }}
+                  />
                 </div>
               </div>
-
-              {/* Progress bar */}
-              <div className="flex-1 max-w-xs hidden md:block bg-slate-100 h-3 rounded-full overflow-hidden p-0.5 border border-slate-200/60 shadow-inner">
-                <div
-                  className="bg-gradient-to-r from-[#1e1b4b] via-[#2d2a6e] to-[#fea619] h-full transition-all duration-500 rounded-full shadow-sm"
-                  style={{ width: `${((currentIndex + 1) / eligibleMembers.length) * 100}%` }}
-                />
-              </div>
-
               <button
-                onClick={() => setViewMode("start")}
-                className="px-4 py-2.5 rounded-2xl text-xs font-black text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200/60 transition-colors shadow-2xs cursor-pointer"
+                onClick={() => setViewMode("list")}
+                className="px-3 py-1.5 rounded-xl text-[11px] font-bold text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
               >
-                ✕ Quitter l&apos;appel
+                Quitter
               </button>
             </div>
 
-            {/* Active Member Big Card */}
-            <div className="text-center py-8 px-4 max-w-2xl mx-auto space-y-6">
-              <div className="inline-flex items-center justify-center w-24 h-24 rounded-3xl bg-gradient-to-tr from-[#1e1b4b] via-[#2d2a6e] to-[#4338ca] text-white text-3xl font-black shadow-xl shadow-indigo-950/20 mb-2 border border-[#fea619]/40 transform hover:rotate-3 transition-transform">
-                {activeMember.first_name[0]}{activeMember.last_name[0]}
+            {/* Fidèle */}
+            <div className="px-5 py-5 flex items-center gap-3.5">
+              <div className="w-12 h-12 shrink-0 rounded-2xl bg-gradient-to-tr from-[#1e1b4b] to-[#4338ca] text-white text-sm font-black flex items-center justify-center shadow-md">
+                {activeMember.first_name[0]}
+                {activeMember.last_name[0]}
               </div>
-
-              <div>
-                <h3 className="text-3xl sm:text-5xl font-extrabold text-[#1e1b4b] tracking-tight">
+              <div className="min-w-0">
+                <h3 className="text-lg sm:text-xl font-headline-md font-extrabold text-[#1e1b4b] tracking-tight truncate">
                   {activeMember.first_name} {activeMember.last_name}
                 </h3>
-                <div className="flex items-center justify-center gap-2.5 flex-wrap mt-4">
-                  <span className="text-xs sm:text-sm font-bold text-slate-600 bg-slate-100/80 px-3.5 py-1.5 rounded-full border border-slate-200 shadow-2xs">
-                    📞 {activeMember.phone || "Pas de téléphone renseigné"}
+                <div className="flex items-center gap-2 flex-wrap mt-0.5">
+                  <span className="text-[11px] font-semibold text-slate-500">
+                    {activeMember.phone || "Pas de téléphone"}
                   </span>
                   {activeMember.status === "new" && (
-                    <span className="px-3.5 py-1.5 rounded-full text-xs font-black bg-indigo-50 text-indigo-700 border border-indigo-200 shadow-2xs flex items-center gap-1.5">
-                      <span>✨ Nouveau</span>
-                      <span className="bg-indigo-600 text-white px-1.5 py-0.5 rounded-full text-[10px]">{activeMember.consecutive_sundays_present}/4</span>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                      ✨ Nouveau {activeMember.consecutive_sundays_present}/4
                     </span>
                   )}
                   {activeMember.status === "absent_to_relaunch" && (
-                    <span className="px-3.5 py-1.5 rounded-full text-xs font-black bg-rose-50 text-rose-700 border border-rose-200 animate-pulse shadow-2xs">
-                      ⚠️ À relancer prioritairement
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
+                      ⚠️ À relancer
                     </span>
                   )}
                 </div>
               </div>
+            </div>
 
-              {/* Huge Action Buttons */}
-              <div className="grid grid-cols-2 gap-4 sm:gap-6 pt-6">
-                <button
-                  onClick={() => handleWizardToggle(activeMember.id, true)}
-                  className={`py-7 sm:py-9 rounded-3xl font-black text-lg sm:text-2xl transition-all duration-300 flex flex-col items-center justify-center gap-2.5 shadow-xl cursor-pointer ${
-                    attendanceState[activeMember.id] === true
-                      ? "bg-gradient-to-br from-emerald-600 to-teal-700 text-white ring-4 ring-emerald-300/80 scale-105 shadow-emerald-600/40"
-                      : "bg-emerald-50/80 text-emerald-900 hover:bg-emerald-600 hover:text-white border border-emerald-300/80 shadow-emerald-500/10"
-                  }`}
-                >
-                  <span className="text-4xl sm:text-5xl drop-shadow-sm">✓</span>
-                  <span className="tracking-wide font-headline-md">PRÉSENT(E)</span>
-                </button>
+            {/* Actions */}
+            <div className="px-5 pb-5 grid grid-cols-2 gap-3">
+              <button
+                onClick={() => handleWizardToggle(activeMember.id, true)}
+                className={`py-3.5 rounded-2xl font-black text-sm transition-all flex items-center justify-center gap-2 cursor-pointer border ${
+                  attendanceState[activeMember.id] === true
+                    ? "bg-emerald-600 text-white border-emerald-600 shadow-md shadow-emerald-600/25"
+                    : "bg-white text-emerald-800 border-emerald-200 hover:bg-emerald-50"
+                }`}
+              >
+                <span className="text-base">✓</span> Présent
+              </button>
+              <button
+                onClick={() => handleWizardToggle(activeMember.id, false)}
+                className={`py-3.5 rounded-2xl font-black text-sm transition-all flex items-center justify-center gap-2 cursor-pointer border ${
+                  attendanceState[activeMember.id] === false
+                    ? "bg-rose-600 text-white border-rose-600 shadow-md shadow-rose-600/25"
+                    : "bg-white text-rose-800 border-rose-200 hover:bg-rose-50"
+                }`}
+              >
+                <span className="text-base">✕</span> Absent
+              </button>
+            </div>
 
-                <button
-                  onClick={() => handleWizardToggle(activeMember.id, false)}
-                  className={`py-7 sm:py-9 rounded-3xl font-black text-lg sm:text-2xl transition-all duration-300 flex flex-col items-center justify-center gap-2.5 shadow-xl cursor-pointer ${
-                    attendanceState[activeMember.id] === false
-                      ? "bg-gradient-to-br from-rose-600 to-red-700 text-white ring-4 ring-rose-300/80 scale-105 shadow-rose-600/40"
-                      : "bg-rose-50/80 text-rose-900 hover:bg-rose-600 hover:text-white border border-rose-300/80 shadow-rose-500/10"
-                  }`}
-                >
-                  <span className="text-4xl sm:text-5xl drop-shadow-sm">✕</span>
-                  <span className="tracking-wide font-headline-md">ABSENT(E)</span>
-                </button>
-              </div>
-
-              {/* If Sunday service and marked Absent -> Show Absence Reason prompt */}
-              {selectedProgram === "sunday_service" && attendanceState[activeMember.id] === false && (
-                <div className="mt-8 p-6 rounded-3xl bg-rose-50/90 border border-rose-200 text-left space-y-4 animate-fadeIn shadow-md">
-                  <label className="block text-xs font-black text-rose-950 uppercase tracking-wider">
-                    📝 Motif ou raison de l&apos;absence :
-                  </label>
-                  <div className="flex flex-wrap gap-2">
-                    {["Maladie", "Voyage", "Travail", "Imprévu familial", "Non joignable"].map((chip) => (
-                      <button
-                        key={chip}
-                        type="button"
-                        onClick={() => setAbsenceReasons({ ...absenceReasons, [activeMember.id]: chip })}
-                        className="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-white text-rose-900 border border-rose-300 hover:bg-rose-100 transition-colors shadow-2xs cursor-pointer"
-                      >
-                        {chip}
-                      </button>
-                    ))}
-                  </div>
-                  <div className="flex flex-col sm:flex-row gap-3 pt-1">
-                    <input
-                      type="text"
-                      placeholder="Saisissez ou choisissez un motif d'absence..."
-                      value={absenceReasons[activeMember.id] || ""}
-                      onChange={(e) => setAbsenceReasons({ ...absenceReasons, [activeMember.id]: e.target.value })}
-                      className="flex-1 px-4 py-3.5 rounded-2xl bg-white border border-rose-300 text-sm font-semibold text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-rose-500/40 shadow-2xs"
-                    />
+            {/* Motif d'absence (dimanche uniquement) */}
+            {attendanceState[activeMember.id] === false && (
+              <div className="px-5 pb-5 space-y-2.5 animate-fadeIn">
+                <div className="flex flex-wrap gap-1.5">
+                  {["Maladie", "Voyage", "Travail", "Imprévu familial", "Non joignable"].map((chip) => (
                     <button
+                      key={chip}
                       type="button"
-                      onClick={advanceWizard}
-                      className="px-7 py-3.5 rounded-2xl font-black text-sm text-white bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-700 hover:to-red-700 transition-all shadow-md shadow-rose-500/20 cursor-pointer"
+                      onClick={() => setAbsenceReasons({ ...absenceReasons, [activeMember.id]: chip })}
+                      className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-white text-rose-800 border border-rose-200 hover:bg-rose-50 transition-colors cursor-pointer"
                     >
-                      Suivant →
+                      {chip}
                     </button>
-                  </div>
+                  ))}
                 </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* VIEW MODE: SUMMARY */}
-        {viewMode === "summary" && (
-          <div className="glass-panel rounded-3xl p-6 sm:p-10 shadow-lg border border-white/80 space-y-8 animate-fadeIn">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-6 border-b border-slate-200/60 gap-4">
-              <div>
-                <h2 className="text-xl sm:text-2xl font-black text-[#1e1b4b] flex items-center gap-2.5">
-                  <span className="p-2 rounded-xl bg-indigo-50 text-indigo-700 text-lg">📊</span>
-                  <span>Grille Récapitulative des Présences</span>
-                </h2>
-                <p className="text-xs sm:text-sm text-slate-500 mt-1 font-semibold">
-                  {isLocked
-                    ? "Rapport en lecture seule due à l'expiration du délai légal de 7 jours."
-                    : "Vérifiez vos saisies et apportez des ajustements individuels avant l'enregistrement définitif."}
-                </p>
-              </div>
-
-              <div className="flex items-center gap-3 flex-wrap">
-                <span className="px-4 py-2.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs font-black shadow-2xs flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-emerald-600 animate-pulse" />
-                  <span>✓ Présents: {presentCount} ({eligibleMembers.length > 0 ? Math.round((presentCount / eligibleMembers.length) * 100) : 0}%)</span>
-                </span>
-                <span className="px-4 py-2.5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-900 text-xs font-black shadow-2xs flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-rose-600" />
-                  <span>✕ Absents: {absentCount}</span>
-                </span>
-              </div>
-            </div>
-
-            {/* Quick bulk controls */}
-            {!isLocked && (
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4.5 rounded-2xl bg-slate-50/80 border border-slate-200/80 text-xs font-bold">
-                <span className="text-slate-700 font-bold flex items-center gap-2">
-                  <span className="material-symbols-outlined text-base text-indigo-600">bolt</span>
-                  <span>Basculer toute la liste en un clic :</span>
-                </span>
-                <div className="flex gap-2.5">
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="Motif de l'absence..."
+                    value={absenceReasons[activeMember.id] || ""}
+                    onChange={(e) => setAbsenceReasons({ ...absenceReasons, [activeMember.id]: e.target.value })}
+                    className="flex-1 px-3.5 py-2.5 rounded-xl bg-white border border-rose-200 text-xs font-semibold text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-rose-500/25"
+                  />
                   <button
-                    onClick={() => handleSelectAll(true)}
-                    className="px-4 py-2 rounded-xl bg-emerald-100/80 text-emerald-900 hover:bg-emerald-200 font-black transition-colors shadow-2xs cursor-pointer"
+                    type="button"
+                    onClick={advanceWizard}
+                    className="px-5 py-2.5 rounded-xl font-bold text-xs text-white bg-rose-600 hover:bg-rose-700 transition-colors cursor-pointer whitespace-nowrap"
                   >
-                    ✓ Tous Présents
-                  </button>
-                  <button
-                    onClick={() => handleSelectAll(false)}
-                    className="px-4 py-2 rounded-xl bg-rose-100/80 text-rose-900 hover:bg-rose-200 font-black transition-colors shadow-2xs cursor-pointer"
-                  >
-                    ✕ Tous Absents
+                    Suivant →
                   </button>
                 </div>
               </div>
             )}
-
-            {/* 2 Columns: Presents & Absents */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Presents Column */}
-              <div className="space-y-3.5">
-                <h3 className="font-black text-sm uppercase tracking-wider text-emerald-900 bg-emerald-50/90 border border-emerald-200/80 p-3.5 rounded-2xl flex items-center justify-between shadow-2xs">
-                  <span className="flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-emerald-600" />
-                    <span>✓ Fidèles Présents</span>
-                  </span>
-                  <span className="px-2.5 py-0.5 rounded-full bg-emerald-200/70 text-emerald-900 text-xs font-extrabold">{presentCount}</span>
-                </h3>
-                <div className="space-y-2.5 max-h-[480px] overflow-y-auto pr-1">
-                  {eligibleMembers
-                    .filter((m) => attendanceState[m.id] === true)
-                    .map((member) => (
-                      <div
-                        key={member.id}
-                        className="p-4 rounded-2xl border border-emerald-200/80 bg-emerald-50/40 flex items-center justify-between gap-3 shadow-2xs hover:bg-emerald-50/80 transition-all duration-200"
-                      >
-                        <div>
-                          <div className="font-black text-sm text-slate-900">
-                            {member.first_name} {member.last_name}
-                          </div>
-                          <div className="text-xs font-medium text-slate-500 mt-0.5">{member.phone || "Pas de téléphone"}</div>
-                        </div>
-                        {!isLocked && (
-                          <button
-                            onClick={() => handleQuickToggle(member.id, true)}
-                            className="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-white border border-slate-200 text-slate-600 hover:text-rose-600 hover:border-rose-300 transition-colors shadow-2xs cursor-pointer"
-                          >
-                            Basculer Absent
-                          </button>
-                        )}
-                      </div>
-                    ))}
-                  {presentCount === 0 && (
-                    <div className="p-8 text-center rounded-2xl border border-dashed border-slate-200 text-slate-400 text-xs font-semibold bg-slate-50/50">
-                      Aucun fidèle marqué présent.
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Absents Column */}
-              <div className="space-y-3.5">
-                <h3 className="font-black text-sm uppercase tracking-wider text-rose-900 bg-rose-50/90 border border-rose-200/80 p-3.5 rounded-2xl flex items-center justify-between shadow-2xs">
-                  <span className="flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-rose-600" />
-                    <span>✕ Fidèles Absents</span>
-                  </span>
-                  <span className="px-2.5 py-0.5 rounded-full bg-rose-200/70 text-rose-900 text-xs font-extrabold">{absentCount}</span>
-                </h3>
-                <div className="space-y-2.5 max-h-[480px] overflow-y-auto pr-1">
-                  {eligibleMembers
-                    .filter((m) => attendanceState[m.id] !== true)
-                    .map((member) => (
-                      <div
-                        key={member.id}
-                        className="p-4 rounded-2xl border border-rose-200/80 bg-rose-50/40 flex flex-col gap-2.5 shadow-2xs hover:bg-rose-50/80 transition-all duration-200"
-                      >
-                        <div className="flex items-center justify-between gap-3">
-                          <div>
-                            <div className="font-black text-sm text-slate-900">
-                              {member.first_name} {member.last_name}
-                            </div>
-                            <div className="text-xs font-medium text-slate-500 mt-0.5">{member.phone || "Pas de téléphone"}</div>
-                          </div>
-                          {!isLocked && (
-                            <button
-                              onClick={() => handleQuickToggle(member.id, false)}
-                              className="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-white border border-slate-200 text-slate-600 hover:text-emerald-600 hover:border-emerald-300 transition-colors shadow-2xs cursor-pointer"
-                            >
-                              Basculer Présent
-                            </button>
-                          )}
-                        </div>
-
-                        {selectedProgram === "sunday_service" && (
-                          <div className="mt-1 pt-2.5 border-t border-rose-200/60 flex items-center gap-2">
-                            <span className="text-xs font-bold text-rose-900">Motif :</span>
-                            {isLocked ? (
-                              <span className="text-xs font-bold text-rose-950 bg-rose-100/80 px-2.5 py-1 rounded-lg">
-                                {absenceReasons[member.id] || "Absence non justifiée"}
-                              </span>
-                            ) : (
-                              <input
-                                type="text"
-                                placeholder="Motif de l'absence..."
-                                value={absenceReasons[member.id] || ""}
-                                onChange={(e) => setAbsenceReasons({ ...absenceReasons, [member.id]: e.target.value })}
-                                className="flex-1 px-3 py-1.5 rounded-xl bg-white border border-rose-300 text-xs font-semibold text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-rose-500/30"
-                              />
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  {absentCount === 0 && (
-                    <div className="p-8 text-center rounded-2xl border border-dashed border-slate-200 text-slate-400 text-xs font-semibold bg-slate-50/50">
-                      Aucun fidèle marqué absent.
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Footer Action Bar */}
-            <div className="pt-6 border-t border-slate-200/60 flex flex-col sm:flex-row items-center justify-between gap-4">
-              <button
-                onClick={() => {
-                  setCurrentIndex(0);
-                  setViewMode("wizard");
-                }}
-                className="w-full sm:w-auto px-6 py-3.5 rounded-2xl font-bold text-xs bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors border border-slate-200 shadow-2xs cursor-pointer"
-              >
-                ← Recommencer l&apos;appel pas-à-pas
-              </button>
-
-              {isLocked ? (
-                <div className="w-full sm:w-auto px-6 py-3.5 rounded-2xl font-black text-xs bg-amber-100 text-amber-900 border border-amber-300 flex items-center justify-center gap-2 shadow-sm">
-                  <span>🔒 L&apos;enregistrement est désactivé (Délai légal de 7 jours expiré)</span>
-                </div>
-              ) : (
-                <button
-                  onClick={handleSaveAttendance}
-                  disabled={saving || eligibleMembers.length === 0}
-                  className="w-full sm:w-auto px-8 py-4 rounded-2xl font-black text-sm text-[#1e1b4b] bg-gradient-to-r from-[#fea619] via-[#ffb947] to-[#fea619] hover:from-amber-400 hover:to-amber-400 shadow-xl shadow-[#fea619]/25 transition-all transform hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
-                >
-                  {saving ? "Enregistrement en cours..." : "💾 Valider & Enregistrer l'appel"}
-                </button>
-              )}
-            </div>
           </div>
         )}
+
       </main>
     </div>
   );

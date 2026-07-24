@@ -12,6 +12,9 @@ interface NavbarProps {
 export default function Navbar({ role = "shepherd", groupName, userName }: NavbarProps) {
   const pathname = usePathname();
 
+  // Le backoffice et le login ont leur propre chrome
+  if (pathname === "/login" || pathname.startsWith("/admin")) return null;
+
   const navItems = [
     { name: "Dashboard", href: "/", icon: "dashboard" },
     { name: "Fidèles", href: "/members", icon: "group" },
@@ -30,6 +33,8 @@ export default function Navbar({ role = "shepherd", groupName, userName }: Navba
       ? "Supervision Générale (Pasteur)"
       : role === "leader"
       ? "Supervision Leader"
+      : role === "newcomer_friend"
+      ? "Ministère d'Accueil (Ami des Nouveaux)"
       : "Suivi Pastoral (Berger)";
 
   const roleColorBadge =
@@ -37,6 +42,8 @@ export default function Navbar({ role = "shepherd", groupName, userName }: Navba
       ? "bg-gradient-to-r from-amber-500 to-amber-600 text-white border-amber-400/40 shadow-sm shadow-amber-500/20"
       : role === "leader"
       ? "bg-gradient-to-r from-indigo-900 to-indigo-800 text-indigo-100 border-indigo-700/40 shadow-sm shadow-indigo-950/20"
+      : role === "newcomer_friend"
+      ? "bg-gradient-to-r from-sky-600 to-blue-600 text-white border-sky-400/40 shadow-sm shadow-sky-600/20"
       : "bg-gradient-to-r from-emerald-700 to-teal-700 text-white border-emerald-600/40 shadow-sm shadow-emerald-700/20";
 
   return (
@@ -133,7 +140,7 @@ export default function Navbar({ role = "shepherd", groupName, userName }: Navba
                   {userName || "Mon Profil"}
                 </span>
                 <span className="text-xs text-slate-500 font-semibold capitalize flex items-center gap-1">
-                  {role === "super_admin" ? "Super Admin" : role === "admin" ? "Admin" : role === "pastor" ? "Pasteur" : role === "leader" ? "Leader" : "Berger"}
+                  {role === "super_admin" ? "Super Admin" : role === "admin" ? "Admin" : role === "pastor" ? "Pasteur" : role === "leader" ? "Leader" : role === "newcomer_friend" ? "Ami des Nouveaux" : "Berger"}
                 </span>
               </div>
             </Link>

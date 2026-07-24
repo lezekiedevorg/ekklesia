@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import PageLoader from "@/components/common/PageLoader";
 import { createClient } from "@/lib/supabase/client";
-import Navbar from "@/components/layout/Navbar";
 import { useRouter } from "next/navigation";
 import Modal from "@/components/common/Modal";
+import { hasOwnScope } from "@/lib/auth/roles";
 
 interface Member {
   id: string;
@@ -97,7 +98,7 @@ export default function AlertsPage() {
           .order("consecutive_absences", { ascending: false });
 
         let sIds: string[] = [];
-        if (prof.role === "shepherd") {
+        if (hasOwnScope(prof.role)) {
           query = query.eq("shepherd_id", user.id);
         } else if (prof.role === "leader") {
           const { data: grpShepherds } = await supabase
@@ -118,7 +119,7 @@ export default function AlertsPage() {
           .order("visit_date", { ascending: false })
           .limit(20);
 
-        if (prof.role === "shepherd") {
+        if (hasOwnScope(prof.role)) {
           visitsQuery = visitsQuery.eq("shepherd_id", user.id);
         } else if (prof.role === "leader" && sIds.length > 0) {
           visitsQuery = visitsQuery.in("shepherd_id", sIds);
@@ -184,29 +185,11 @@ export default function AlertsPage() {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-[#faf9f6] flex items-center justify-center text-slate-600 font-sans">
-        <div className="glass-panel px-8 py-6 flex items-center gap-4 animate-fade-in-up rounded-2xl">
-          <svg className="animate-spin h-6 w-6 text-indigo-600" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-          </svg>
-          <div>
-            <span className="font-black text-[#1e1b4b] text-base block">Chargement des alertes pastorales...</span>
-            <span className="text-xs text-slate-500 font-medium">Analyse des fidèles en absence prolongée</span>
-          </div>
-        </div>
-      </div>
-    );
+    return <PageLoader label="Chargement des alertes pastorales..." />;
   }
 
   return (
     <div className="min-h-screen bg-[#faf9f6] text-slate-800 pb-20 font-sans selection:bg-indigo-500 selection:text-white">
-      <Navbar
-        role={profile?.role || "shepherd"}
-        groupName={profile?.groups?.name}
-        userName={profile ? `${profile.first_name} ${profile.last_name}` : undefined}
-      />
 
       <main className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 space-y-8 animate-fade-in-up">
         {/* Header Section */}

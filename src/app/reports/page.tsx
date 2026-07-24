@@ -1,12 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import PageLoader from "@/components/common/PageLoader";
+import { hasGlobalScope, hasOwnScope } from "@/lib/auth/roles";
 import { createClient } from "@/lib/supabase/client";
-import Navbar from "@/components/layout/Navbar";
 import { useRouter } from "next/navigation";
 import { formatWeekInterval, getMondayDateStr, getSundayDateStr } from "@/lib/utils/dateFormatter";
 import WeekSelector from "@/components/common/WeekSelector";
 import { computeProgramsSummary } from "@/lib/utils/programs";
+import { getProgramsClient } from "@/lib/utils/programs-data";
+import { ShepherdReportPrint, PrintData } from "@/components/reports/ShepherdReportPrint";
 
 interface Profile {
   id: string;
@@ -393,9 +396,26 @@ export default function ReportsPage() {
   // Shepherd live preview calculation state
   const [previewData, setPreviewData] = useState<WeeklyReport["content"] | null>(null);
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split("T")[0]);
+  const [printData, setPrintData] = useState<PrintData | null>(null);
 
   const supabase = createClient();
   const router = useRouter();
+
+  // Un rapport consolidé (aperçu du berger ou rapport soumis) partage cette forme.
+  const toPrintData = (name: string, weekStart: string, content: any): PrintData => ({
+    shepherdName: name,
+    weekStart,
+    form: content?.discipline || {},
+    programsSummary: content?.programs_summary || [],
+    absentees: content?.absentees_with_reasons || [],
+  });
+
+  // Rendre le composant caché, laisser React peindre, puis imprimer.
+  useEffect(() => {
+    if (!printData) return;
+    const t = setTimeout(() => window.print(), 50);
+    return () => clearTimeout(t);
+  }, [printData]);
 
   useEffect(() => {
     async function loadData() {
@@ -419,7 +439,7 @@ export default function ReportsPage() {
         }
         setProfile(prof as Profile);
 
-        if (prof.role === "pastor") {
+        if (hasGlobalScope(prof.role)) {
           const { data: grps } = await supabase.from("groups").select("*");
           if (grps) setGroupsList(grps);
         }
@@ -430,7 +450,7 @@ export default function ReportsPage() {
           .select("*, profiles(first_name, last_name), groups(name)")
           .order("report_date", { ascending: false });
 
-        if (prof.role === "shepherd") {
+        if (hasOwnScope(prof.role)) {
           query = query.eq("shepherd_id", user.id);
         } else if (prof.role === "leader") {
           query = query.eq("group_id", prof.group_id);
@@ -439,8 +459,8 @@ export default function ReportsPage() {
         const { data: repData } = await query;
         if (repData) setReports(repData as WeeklyReport[]);
 
-        // If Shepherd, calculate live preview for selectedDate
-        if (prof.role === "shepherd") {
+        // Personal scope (berger, admin, super_admin) : live preview for selectedDate
+        if (hasOwnScope(prof.role)) {
           await computeShepherdPreview(prof.id, selectedDate);
         }
       } catch (err) {
@@ -470,7 +490,8 @@ export default function ReportsPage() {
       .lte("date", sundayStr) : { data: [] };
 
     // Compute KPIs for every program of the week using our centralized helper
-    const programsSummary: ProgramSummaryItem[] = computeProgramsSummary(mems || [], attData || []);
+    const programList = await getProgramsClient();
+    const programsSummary: ProgramSummaryItem[] = computeProgramsSummary(mems || [], attData || [], programList);
 
     const sundayProg = programsSummary.find((p) => p.program_type === "sunday_service");
     const presentCount = sundayProg?.present_count || 0;
@@ -486,6 +507,7 @@ export default function ReportsPage() {
     const { data: absReasons } = memIds.length > 0 ? await supabase
       .from("sunday_absences")
       .select("*")
+      .eq("program_type", "sunday_service")
       .in("member_id", memIds)
       .gte("date", mondayStr)
       .lte("date", sundayStr) : { data: [] };
@@ -657,26 +679,11 @@ export default function ReportsPage() {
     : 0;
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center text-slate-600">
-        <div className="flex items-center gap-3 bg-white px-6 py-4 rounded-2xl shadow-md border border-slate-200 font-semibold text-sm">
-          <svg className="animate-spin h-5 w-5 text-indigo-600" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-          </svg>
-          <span>Chargement des rapports & analyses...</span>
-        </div>
-      </div>
-    );
+    return <PageLoader label="Chargement des rapports & analyses..." />;
   }
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 pb-20 font-sans">
-      <Navbar
-        role={profile?.role || "shepherd"}
-        groupName={profile?.groups?.name}
-        userName={profile ? `${profile.first_name} ${profile.last_name}` : undefined}
-      />
 
       <main className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 space-y-8">
         {/* Header Section */}
@@ -803,14 +810,31 @@ export default function ReportsPage() {
                 </p>
               </div>
 
-              <button
-                onClick={handleSubmitReport}
-                disabled={saving}
-                className="px-6 py-4 rounded-2xl font-black text-xs text-[#1e1b4b] bg-gradient-to-r from-[#fea619] via-[#ffb947] to-[#fea619] hover:from-white hover:to-white shadow-xl shadow-[#fea619]/30 transition-all transform hover:-translate-y-0.5 active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2"
-              >
-                <span className="text-base">🚀</span>
-                <span>{saving ? "Soumission en cours..." : "Soumettre ce rapport hebdomadaire"}</span>
-              </button>
+              <div className="flex flex-col sm:flex-row gap-3 shrink-0">
+                <button
+                  onClick={() =>
+                    setPrintData(
+                      toPrintData(
+                        profile ? `${profile.first_name} ${profile.last_name}` : "",
+                        getMondayDateStr(selectedDate),
+                        previewData
+                      )
+                    )
+                  }
+                  className="px-5 py-4 rounded-2xl font-black text-xs text-white bg-white/10 hover:bg-white/20 border border-white/20 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-[18px]">picture_as_pdf</span>
+                  <span>Télécharger (PDF)</span>
+                </button>
+                <button
+                  onClick={handleSubmitReport}
+                  disabled={saving}
+                  className="px-6 py-4 rounded-2xl font-black text-xs text-[#1e1b4b] bg-gradient-to-r from-[#fea619] via-[#ffb947] to-[#fea619] hover:from-white hover:to-white shadow-xl shadow-[#fea619]/30 transition-all transform hover:-translate-y-0.5 active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  <span className="text-base">🚀</span>
+                  <span>{saving ? "Soumission en cours..." : "Soumettre ce rapport hebdomadaire"}</span>
+                </button>
+              </div>
             </div>
 
             {/* Preview Grid Stats */}
@@ -1001,6 +1025,22 @@ export default function ReportsPage() {
                     </div>
 
                     <div className="flex items-center gap-3 flex-wrap">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setPrintData(
+                            toPrintData(
+                              report.profiles ? `${report.profiles.first_name} ${report.profiles.last_name}` : "Berger",
+                              getMondayDateStr(report.report_date),
+                              report.content
+                            )
+                          );
+                        }}
+                        title="Télécharger ce rapport en PDF"
+                        className="w-9 h-9 rounded-xl bg-white/80 hover:bg-white border border-slate-200 text-[#1e1b4b] flex items-center justify-center shadow-2xs transition-colors cursor-pointer"
+                      >
+                        <span className="material-symbols-outlined text-[18px]">picture_as_pdf</span>
+                      </button>
                       {report.status === "submitted" && (
                         <span className="px-3.5 py-1.5 rounded-full text-xs font-bold bg-amber-500/15 text-amber-900 border border-amber-500/30 shadow-2xs flex items-center gap-1.5">
                           <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
@@ -1157,6 +1197,9 @@ export default function ReportsPage() {
           )}
         </div>
       </main>
+
+      {/* Rendu hors écran, visible uniquement à l'impression (Enregistrer en PDF) */}
+      <ShepherdReportPrint data={printData} />
     </div>
   );
 }

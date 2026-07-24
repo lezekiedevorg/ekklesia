@@ -1,17 +1,41 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import PageLoader from "@/components/common/PageLoader";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
-import Navbar from "@/components/layout/Navbar";
 import WeekSelector from "@/components/common/WeekSelector";
 import { Profile, ShepherdActivity, ProgramSummaryItem, Member } from "@/types/db";
 import { computeProgramsSummary } from "@/lib/utils/programs";
+import { getProgramsClient } from "@/lib/utils/programs-data";
 import { DailyDisciplinesSection } from "@/components/activities/DailyDisciplinesSection";
 import { PastoralActionsSection } from "@/components/activities/PastoralActionsSection";
 import { ProgramsPresenceCard } from "@/components/activities/ProgramsPresenceCard";
 import { MonthlyActivitiesSection } from "@/components/activities/MonthlyActivitiesSection";
 import { ObservationsSection } from "@/components/activities/ObservationsSection";
+import {
+  QI_DISCIPLINES,
+  YESNO_DISCIPLINES,
+  SHEPHERD_WORK_ITEMS,
+  SHEPHERD_ATTENDANCE_ITEMS,
+  MONTHLY_ITEMS,
+  SOULS_COUNTERS,
+} from "@/lib/constants/programs";
+
+// Le formulaire est dérivé des définitions du rapport officiel : une colonne
+// oubliée ici ne peut plus l'être dans le payload, les deux viennent d'ici.
+const BLANK_FORM: Record<string, any> = {
+  ...Object.fromEntries(QI_DISCIPLINES.flatMap((d) => [[d.q, false], [d.i, false]])),
+  ...Object.fromEntries(YESNO_DISCIPLINES.map((d) => [d.key, false])),
+  ...Object.fromEntries(SHEPHERD_WORK_ITEMS.map((i) => [i.key, false])),
+  ...Object.fromEntries(SHEPHERD_ATTENDANCE_ITEMS.map((i) => [i.key, false])),
+  ...Object.fromEntries(MONTHLY_ITEMS.map((i) => [i.key, false])),
+  ...Object.fromEntries(SOULS_COUNTERS.map((c) => [c.key, 0])),
+  phone_calls_count: 0,
+  meditated_book: "",
+  mentoring_theme: "",
+  other_observations: "",
+};
 
 export default function ShepherdActivitiesPage() {
   const supabase = createClient();
@@ -30,40 +54,11 @@ export default function ShepherdActivitiesPage() {
 
   const [activities, setActivities] = useState<ShepherdActivity[]>([]);
   const [programsSummary, setProgramsSummary] = useState<ProgramSummaryItem[]>([]);
+  const [absentees, setAbsentees] = useState<{ name: string; reason: string }[]>([]);
   const [message, setMessage] = useState<string | null>(null);
 
-  // Form state
-  const [form, setForm] = useState({
-    daily_prayer_q_done: false,
-    daily_prayer_i_done: false,
-    bible_reading_q_done: false,
-    bible_reading_i_done: false,
-    meditation_q_done: false,
-    meditation_i_done: false,
-    meditation_book: "",
-    meditation_chapter_start: "" as number | "",
-    meditation_chapter_end: "" as number | "",
-    evangelism_q_done: false,
-    evangelism_i_done: false,
-
-    pastoral_souls_won: 0,
-    pastoral_new_contacts: 0,
-    pastoral_first_timers: 0,
-    pastoral_home_visits: 0,
-    pastoral_sick_visits: 0,
-    pastoral_consolation_visits: 0,
-    pastoral_followup_calls: 0,
-
-    monthly_pre_service_intercession: false,
-    monthly_in_person_prayer_done: false,
-    monthly_anagkazo: false,
-    monthly_group_evangelization: false,
-    monthly_prayer_vigil_done: false,
-    prayer_chain_done: false,
-
-    mentoring_theme: "",
-    other_observations: "",
-  });
+  // Form state (clés = colonnes réelles de shepherd_activities)
+  const [form, setForm] = useState<Record<string, any>>(BLANK_FORM);
 
   // 1. Initial Load: profile & shepherd activities
   useEffect(() => {
@@ -114,70 +109,14 @@ export default function ShepherdActivitiesPage() {
     );
 
     if (currentAct) {
-      setForm({
-        daily_prayer_q_done: currentAct.daily_prayer_q_done || false,
-        daily_prayer_i_done: currentAct.daily_prayer_i_done || false,
-        bible_reading_q_done: currentAct.bible_reading_q_done || false,
-        bible_reading_i_done: currentAct.bible_reading_i_done || false,
-        meditation_q_done: currentAct.meditation_q_done || false,
-        meditation_i_done: currentAct.meditation_i_done || false,
-        meditation_book: currentAct.meditation_book || "",
-        meditation_chapter_start: currentAct.meditation_chapter_start ?? "",
-        meditation_chapter_end: currentAct.meditation_chapter_end ?? "",
-        evangelism_q_done: currentAct.evangelism_q_done || false,
-        evangelism_i_done: currentAct.evangelism_i_done || false,
-
-        pastoral_souls_won: currentAct.pastoral_souls_won || 0,
-        pastoral_new_contacts: currentAct.pastoral_new_contacts || 0,
-        pastoral_first_timers: currentAct.pastoral_first_timers || 0,
-        pastoral_home_visits: currentAct.pastoral_home_visits || 0,
-        pastoral_sick_visits: currentAct.pastoral_sick_visits || 0,
-        pastoral_consolation_visits: currentAct.pastoral_consolation_visits || 0,
-        pastoral_followup_calls: currentAct.pastoral_followup_calls || 0,
-
-        monthly_pre_service_intercession: currentAct.monthly_pre_service_intercession || false,
-        monthly_in_person_prayer_done: currentAct.monthly_in_person_prayer_done || currentAct.monthly_in_person_done || false,
-        monthly_anagkazo: currentAct.monthly_anagkazo || false,
-        monthly_group_evangelization: currentAct.monthly_group_evangelization || false,
-        monthly_prayer_vigil_done: currentAct.monthly_prayer_vigil_done || currentAct.monthly_vigil_done || false,
-        prayer_chain_done: currentAct.prayer_chain_done || false,
-
-        mentoring_theme: currentAct.mentoring_theme || "",
-        other_observations: currentAct.other_observations || "",
+      const hydrated: Record<string, any> = { ...BLANK_FORM };
+      Object.keys(BLANK_FORM).forEach((key) => {
+        const value = (currentAct as any)[key];
+        if (value !== null && value !== undefined) hydrated[key] = value;
       });
+      setForm(hydrated);
     } else {
-      // Default empty state
-      setForm({
-        daily_prayer_q_done: false,
-        daily_prayer_i_done: false,
-        bible_reading_q_done: false,
-        bible_reading_i_done: false,
-        meditation_q_done: false,
-        meditation_i_done: false,
-        meditation_book: "",
-        meditation_chapter_start: "",
-        meditation_chapter_end: "",
-        evangelism_q_done: false,
-        evangelism_i_done: false,
-
-        pastoral_souls_won: 0,
-        pastoral_new_contacts: 0,
-        pastoral_first_timers: 0,
-        pastoral_home_visits: 0,
-        pastoral_sick_visits: 0,
-        pastoral_consolation_visits: 0,
-        pastoral_followup_calls: 0,
-
-        monthly_pre_service_intercession: false,
-        monthly_in_person_prayer_done: false,
-        monthly_anagkazo: false,
-        monthly_group_evangelization: false,
-        monthly_prayer_vigil_done: false,
-        prayer_chain_done: false,
-
-        mentoring_theme: "",
-        other_observations: "",
-      });
+      setForm(BLANK_FORM);
     }
   }, [selectedWeek, activities, profile]);
 
@@ -194,7 +133,7 @@ export default function ShepherdActivitiesPage() {
 
         let memQuery = supabase
           .from("members")
-          .select("id, status, current_class, archived_at")
+          .select("id, first_name, last_name, status, current_class, archived_at")
           .is("archived_at", null)
           .neq("status", "archived");
 
@@ -214,8 +153,39 @@ export default function ShepherdActivitiesPage() {
               .lte("date", sundayStr)
           : { data: [] };
 
-        const summary = computeProgramsSummary(membersList, attData || []);
+        const programList = await getProgramsClient();
+        const summary = computeProgramsSummary(membersList, attData || [], programList);
         setProgramsSummary(summary);
+
+        // "Noms des absents et raison" du rapport : repris du pointage dominical
+        const { data: reasons } = memIds.length > 0
+          ? await supabase
+              .from("sunday_absences")
+              .select("member_id, reason")
+              .eq("program_type", "sunday_service")
+              .in("member_id", memIds)
+              .gte("date", mondayStr)
+              .lte("date", sundayStr)
+          : { data: [] };
+
+        const reasonByMember = new Map((reasons || []).map((r) => [r.member_id, r.reason]));
+        const presentSunday = new Set(
+          (attData || [])
+            .filter((a) => a.program_type === "sunday_service" && a.is_present)
+            .map((a) => a.member_id)
+        );
+        const pointedSunday = (attData || []).some((a) => a.program_type === "sunday_service");
+
+        setAbsentees(
+          pointedSunday
+            ? membersList
+                .filter((m) => !presentSunday.has(m.id))
+                .map((m) => ({
+                  name: `${m.first_name} ${m.last_name}`,
+                  reason: reasonByMember.get(m.id) || "Absence non justifiée",
+                }))
+            : []
+        );
       } catch (e) {
         console.error("Erreur calcul présence programmes:", e);
       }
@@ -242,35 +212,10 @@ export default function ShepherdActivitiesPage() {
 
     try {
       const payload = {
+        ...form,
         shepherd_id: profile.id,
         week_start_date: selectedWeek,
-        daily_prayer_q_done: form.daily_prayer_q_done,
-        daily_prayer_i_done: form.daily_prayer_i_done,
-        bible_reading_q_done: form.bible_reading_q_done,
-        bible_reading_i_done: form.bible_reading_i_done,
-        meditation_q_done: form.meditation_q_done,
-        meditation_i_done: form.meditation_i_done,
-        meditation_book: form.meditation_book || null,
-        meditation_chapter_start: form.meditation_chapter_start !== "" ? Number(form.meditation_chapter_start) : null,
-        meditation_chapter_end: form.meditation_chapter_end !== "" ? Number(form.meditation_chapter_end) : null,
-        evangelism_q_done: form.evangelism_q_done,
-        evangelism_i_done: form.evangelism_i_done,
-
-        pastoral_souls_won: form.pastoral_souls_won,
-        pastoral_new_contacts: form.pastoral_new_contacts,
-        pastoral_first_timers: form.pastoral_first_timers,
-        pastoral_home_visits: form.pastoral_home_visits,
-        pastoral_sick_visits: form.pastoral_sick_visits,
-        pastoral_consolation_visits: form.pastoral_consolation_visits,
-        pastoral_followup_calls: form.pastoral_followup_calls,
-
-        monthly_pre_service_intercession: form.monthly_pre_service_intercession,
-        monthly_in_person_prayer_done: form.monthly_in_person_prayer_done,
-        monthly_anagkazo: form.monthly_anagkazo,
-        monthly_group_evangelization: form.monthly_group_evangelization,
-        monthly_prayer_vigil_done: form.monthly_prayer_vigil_done,
-        prayer_chain_done: form.prayer_chain_done,
-
+        meditated_book: form.meditated_book || null,
         mentoring_theme: form.mentoring_theme || null,
         other_observations: form.other_observations || null,
       };
@@ -300,23 +245,11 @@ export default function ShepherdActivitiesPage() {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-[#f8fafc] to-[#f1f5f9] flex items-center justify-center text-[#1e1b4b]">
-        <div className="glass-panel px-8 py-6 rounded-3xl shadow-xl flex items-center gap-4 border border-white/80 font-bold text-sm">
-          <div className="w-6 h-6 rounded-full border-3 border-indigo-600 border-t-transparent animate-spin" />
-          <span>Chargement de la discipline et consécration...</span>
-        </div>
-      </div>
-    );
+    return <PageLoader label="Chargement de la discipline et consécration..." />;
   }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-[#f8fafc] to-[#f1f5f9] text-[#1e1b4b] pb-24 font-sans selection:bg-[#fea619]/20">
-      <Navbar
-        role={profile?.role || "shepherd"}
-        groupName={profile?.groups?.name}
-        userName={profile ? `${profile.first_name} ${profile.last_name}` : undefined}
-      />
 
       <main className="max-w-6xl mx-auto p-4 sm:p-6 lg:p-8 space-y-6 animate-fade-in-up">
         {/* Header Section */}
@@ -357,9 +290,9 @@ export default function ShepherdActivitiesPage() {
         <form onSubmit={handleSubmit} className="space-y-6">
           <DailyDisciplinesSection form={form} setForm={setForm} selectQI={selectQI} />
           <PastoralActionsSection form={form} setForm={setForm} />
-          <ProgramsPresenceCard programsSummary={programsSummary} />
+          <ProgramsPresenceCard programsSummary={programsSummary} form={form} setForm={setForm} />
           <MonthlyActivitiesSection form={form} setForm={setForm} />
-          <ObservationsSection form={form} setForm={setForm} />
+          <ObservationsSection form={form as any} setForm={setForm} absentees={absentees} />
 
           {/* Sticky/Prominent Submit Button */}
           <div className="glass-panel p-5 sm:p-6 rounded-3xl shadow-xl border border-white/80 flex flex-col sm:flex-row items-center justify-between gap-4 sticky bottom-6 z-30">

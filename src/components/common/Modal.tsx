@@ -1,5 +1,6 @@
 'use client';
-import { useEffect, ReactNode } from 'react';
+import { useEffect, useState, ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 
 interface ModalProps {
   open: boolean;
@@ -9,31 +10,45 @@ interface ModalProps {
 }
 
 export default function Modal({ open, onClose, children, maxWidth = 'max-w-lg' }: ModalProps) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
   useEffect(() => {
     if (open) document.body.style.overflow = 'hidden';
     else document.body.style.overflow = '';
     return () => { document.body.style.overflow = ''; };
   }, [open]);
 
-  if (!open) return null;
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open, onClose]);
 
-  return (
+  if (!open || !mounted) return null;
+
+  // Portal vers <body> : sinon un ancêtre avec transform/backdrop-filter
+  // (animate-fade-in-up, glass-panel) devient le bloc conteneur du `fixed`
+  // et l'overlay ne couvre plus tout l'écran.
+  return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-900/70 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-900/70 backdrop-blur-sm animate-fadeIn"
       onClick={onClose}
     >
       <div
-        className={`${maxWidth} w-full max-h-[90vh] overflow-y-auto overscroll-contain bg-white rounded-3xl border border-slate-200/80 shadow-2xl p-5 relative`}
+        className={`${maxWidth} w-full max-h-[88vh] flex flex-col bg-white rounded-3xl border border-slate-200/80 shadow-2xl relative`}
         onClick={(e) => e.stopPropagation()}
       >
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 font-black text-sm flex items-center justify-center transition-colors"
+          className="absolute top-4 right-4 z-10 w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 font-black text-sm flex items-center justify-center transition-colors cursor-pointer"
         >
           ×
         </button>
-        {children}
+        <div className="overflow-y-auto overscroll-contain p-5 sm:p-6">{children}</div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
