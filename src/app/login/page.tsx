@@ -44,7 +44,7 @@ export default function LoginPage() {
           password,
         });
         if (signInError) {
-          setError(signInError.message);
+          setError(signInError.message || JSON.stringify(signInError) || "Identifiants incorrects");
           return;
         }
         // Double sécurité : synchronisation côté serveur
@@ -69,7 +69,7 @@ export default function LoginPage() {
       <div className="absolute top-1/6 left-1/4 w-[500px] h-[500px] bg-gradient-to-tr from-indigo-500/15 via-purple-500/10 to-transparent rounded-full blur-3xl pointer-events-none animate-float" />
       <div className="absolute bottom-1/6 right-1/4 w-[500px] h-[500px] bg-gradient-to-tr from-amber-500/15 via-amber-400/10 to-transparent rounded-full blur-3xl pointer-events-none animate-float" style={{ animationDelay: "2s" }} />
 
-      <div className="w-full max-w-md bg-white/90 backdrop-blur-2xl border border-slate-200/80 rounded-[32px] shadow-[0_20px_60px_-15px_rgba(30,27,75,0.12)] p-8 sm:p-10 relative z-10 animate-fade-in-up">
+      <div data-testid="login-form" className="w-full max-w-md bg-white/90 backdrop-blur-2xl border border-slate-200/80 rounded-[32px] shadow-[0_20px_60px_-15px_rgba(30,27,75,0.12)] p-8 sm:p-10 relative z-10 animate-fade-in-up">
         {/* Logo & Header */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-gradient-to-tr from-[#1e1b4b] via-[#312e81] to-[#4338ca] shadow-xl shadow-indigo-950/25 mb-5 transform hover:scale-105 hover:rotate-3 transition-all duration-300 border border-[#fea619]/40 group">
@@ -90,7 +90,7 @@ export default function LoginPage() {
         </div>
 
         {error && (
-          <div className="mb-6 p-4 rounded-2xl bg-rose-50/90 border border-rose-200 text-rose-700 text-xs font-bold flex items-start gap-3 shadow-2xs animate-fade-in-up">
+          <div data-testid="login-error" className="mb-6 p-4 rounded-2xl bg-rose-50/90 border border-rose-200 text-rose-700 text-xs font-bold flex items-start gap-3 shadow-2xs animate-fade-in-up">
             <span className="material-symbols-outlined text-rose-500 text-[20px] shrink-0">error</span>
             <span>{error}</span>
           </div>
@@ -118,6 +118,7 @@ export default function LoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="ezekiel@eglise.org"
+                data-testid="login-email"
                 className="w-full pl-11 pr-4 py-3.5 rounded-2xl bg-slate-50/90 border border-slate-200 text-slate-900 placeholder-slate-400 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-[#1e1b4b]/20 focus:border-[#1e1b4b] focus:bg-white transition-all duration-200 shadow-2xs"
               />
             </div>
@@ -137,6 +138,7 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
+                data-testid="login-password"
                 className="w-full pl-11 pr-4 py-3.5 rounded-2xl bg-slate-50/90 border border-slate-200 text-slate-900 placeholder-slate-400 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-[#1e1b4b]/20 focus:border-[#1e1b4b] focus:bg-white transition-all duration-200 shadow-2xs"
               />
             </div>
@@ -145,6 +147,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
+            data-testid="login-submit"
             className="w-full py-4 px-4 rounded-2xl font-headline-md font-extrabold text-sm text-white bg-gradient-to-r from-[#1e1b4b] via-[#312e81] to-[#4338ca] hover:from-[#312e81] hover:to-[#4338ca] shadow-lg shadow-indigo-950/25 border border-[#fea619]/40 focus:outline-none focus:ring-2 focus:ring-[#1e1b4b] focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 transform active:scale-[0.98] cursor-pointer flex items-center justify-center gap-2.5"
           >
             {loading ? (

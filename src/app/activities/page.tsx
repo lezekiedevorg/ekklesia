@@ -83,6 +83,12 @@ export default function ShepherdActivitiesPage() {
         }
         setProfile(prof as Profile);
 
+        // Le leader n'a pas accès à la page des disciplines (c'est au berger de remplir)
+        if (prof.role === "leader") {
+          router.push("/");
+          return;
+        }
+
         const { data: actData } = await supabase
           .from("shepherd_activities")
           .select("*")

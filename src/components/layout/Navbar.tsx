@@ -15,14 +15,20 @@ export default function Navbar({ role = "shepherd", groupName, userName }: Navba
   // Le backoffice et le login ont leur propre chrome
   if (pathname === "/login" || pathname.startsWith("/admin")) return null;
 
-  const navItems = [
-    { name: "Dashboard", href: "/", icon: "dashboard" },
-    { name: "Fidèles", href: "/members", icon: "group" },
-    { name: "Présences", href: "/attendance", icon: "event_available" },
-    { name: "Discipline", href: "/activities", icon: "auto_awesome" },
-    { name: "Alertes", href: "/alerts", icon: "notifications_active" },
-    { name: "Rapports", href: "/reports", icon: "assessment" },
+  const allNavItems = [
+    { name: "Dashboard", testId: "dashboard", href: "/", icon: "dashboard" },
+    { name: "Fidèles", testId: "members", href: "/members", icon: "group" },
+    { name: "Présences", testId: "attendance", href: "/attendance", icon: "event_available", leaderOnly: false },
+    { name: "Discipline", testId: "activities", href: "/activities", icon: "auto_awesome", leaderOnly: false },
+    { name: "Alertes", testId: "alerts", href: "/alerts", icon: "notifications_active" },
+    { name: "Rapports", testId: "reports", href: "/reports", icon: "assessment" },
   ];
+
+  // Le leader ne voit que Dashboard, Fidèles, Alertes, Rapports
+  const navItems = allNavItems.filter((item) => {
+    if (role === "leader" && item.leaderOnly === false) return false;
+    return true;
+  });
 
   const roleLabel =
     role === "super_admin"
@@ -49,7 +55,7 @@ export default function Navbar({ role = "shepherd", groupName, userName }: Navba
   return (
     <>
       {/* Desktop & Tablet Top Navbar - Luxe Sanctuary */}
-      <header className="sticky top-0 z-40 bg-white/85 backdrop-blur-2xl border-b border-slate-200/80 shadow-[0_4px_24px_-4px_rgba(30,27,75,0.04)] px-4 md:px-8 py-3.5 transition-all">
+      <header data-testid="navbar-header" className="sticky top-0 z-40 bg-white/85 backdrop-blur-2xl border-b border-slate-200/80 shadow-[0_4px_24px_-4px_rgba(30,27,75,0.04)] px-4 md:px-8 py-3.5 transition-all">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-6 lg:gap-8">
             <Link href="/" className="flex items-center gap-3.5 group">
@@ -82,6 +88,7 @@ export default function Navbar({ role = "shepherd", groupName, userName }: Navba
                   <Link
                     key={item.href}
                     href={item.href}
+                    data-testid={`nav-${item.testId}`}
                     className={`px-3.5 py-2 rounded-xl text-xs font-label-caps font-bold flex items-center gap-2 transition-all duration-300 ${
                       isActive
                         ? "bg-gradient-to-r from-[#1e1b4b] to-[#312e81] text-white shadow-md shadow-indigo-950/20 scale-[1.02] border border-[#fea619]/30"
@@ -108,6 +115,7 @@ export default function Navbar({ role = "shepherd", groupName, userName }: Navba
                 <Link
                   href="/admin"
                   title="Accéder au Backoffice Administration"
+                  data-testid="nav-backoffice"
                   className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#1e1b4b] to-[#312e81] text-[#fea619] text-xs font-bold transition-all flex items-center gap-1.5 shadow-lg shadow-[#1e1b4b]/30 border border-[#fea619]/50 hover:ring-1 hover:ring-[#fea619]/20 hover:scale-[1.02]"
                 >
                   <span className="material-symbols-outlined text-[20px]">admin_panel_settings</span>
@@ -120,6 +128,7 @@ export default function Navbar({ role = "shepherd", groupName, userName }: Navba
             <Link
               href="/alerts"
               title="Notifications & Alertes"
+              data-testid="nav-alerts-bell"
               className="w-11 h-11 rounded-2xl bg-white border border-slate-200/80 flex items-center justify-center text-slate-600 hover:text-[#fea619] hover:border-[#fea619]/50 hover:bg-amber-50/30 transition-all relative shadow-2xs group"
             >
               <span className="material-symbols-outlined text-[20px] group-hover:scale-110 transition-transform">
@@ -130,6 +139,7 @@ export default function Navbar({ role = "shepherd", groupName, userName }: Navba
 
             <Link
               href="/profile"
+              data-testid="nav-profile"
               className="flex items-center gap-3 p-1.5 pr-4 rounded-2xl bg-white border border-slate-200/80 hover:border-indigo-300 text-slate-800 hover:text-[#1e1b4b] text-xs font-bold transition-all duration-300 shadow-2xs group hover:shadow-md"
             >
               <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-[#1e1b4b] via-[#312e81] to-[#4338ca] flex items-center justify-center text-[13px] font-black text-white shadow-sm group-hover:scale-105 transition-transform border border-[#fea619]/40">
@@ -150,7 +160,7 @@ export default function Navbar({ role = "shepherd", groupName, userName }: Navba
 
       {/* Mobile Bottom Floating Island Nav - Luxe iOS Sanctuary Style */}
       <nav className="lg:hidden fixed bottom-4 left-4 right-4 z-50 bg-white/95 backdrop-blur-2xl border border-slate-200/90 rounded-3xl shadow-[0_12px_40px_rgba(30,27,75,0.15)] px-2.5 py-2 max-w-lg mx-auto">
-        <div className={`grid ${(role === "super_admin" || role === "admin") ? "grid-cols-7" : "grid-cols-6"} gap-1`}>
+        <div className={`grid ${navItems.length + ((role === "super_admin" || role === "admin") ? 1 : 0)} gap-1`}>
           {navItems.map((item) => {
             const isActive = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href));
             return (

@@ -46,10 +46,10 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   return (
     <div className="h-screen overflow-hidden bg-[#FAF9F6] flex flex-col md:flex-row font-['Plus_Jakarta_Sans',sans-serif] text-[#1E1B4B] selection:bg-[#fea619]/30">
       <AdminSidebar />
-      {/* Scroll container: the topbar sticks to the top of THIS column, not the window */}
-      <div className="flex-1 flex flex-col min-w-0 h-screen overflow-y-auto">
+      {/* Right column: topbar is fixed-height, main scrolls independently */}
+      <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
         <AdminTopbar userContext={context} />
-        <main className="flex-1 p-6 md:p-8 max-w-7xl w-full mx-auto">
+        <main className="flex-1 overflow-y-auto p-6 md:p-8 max-w-7xl w-full mx-auto">
           {children}
         </main>
       </div>

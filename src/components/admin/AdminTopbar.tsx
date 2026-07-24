@@ -58,12 +58,12 @@ export default function AdminTopbar({ userContext }: AdminTopbarProps) {
       : 'ADMINISTRATION';
 
   return (
-    <header className="h-[70px] bg-white/85 backdrop-blur-2xl border-b border-slate-200/80 pl-16 pr-4 md:px-8 sticky top-0 z-40 flex items-center justify-between shadow-[0_4px_24px_-4px_rgba(30,27,75,0.04)]">
+    <header data-testid="admin-topbar" className="h-[70px] shrink-0 bg-white/85 backdrop-blur-2xl border-b border-slate-200/80 pl-16 pr-4 md:px-8 z-40 flex items-center justify-between shadow-[0_4px_24px_-4px_rgba(30,27,75,0.04)] overflow-hidden">
       {/* Left: breadcrumb */}
-      <div className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-wider min-w-0">
-        <span className="text-[#1e1b4b] font-black">SANCTUAIRE</span>
-        <span className="text-slate-300">/</span>
-        <span className="text-[#1e1b4b] truncate">{crumb}</span>
+      <div className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-wider min-w-0 w-full overflow-hidden">
+        <span className="text-[#1e1b4b] font-black shrink-0">SANCTUAIRE</span>
+        <span className="text-slate-300 shrink-0">/</span>
+        <span className="text-[#1e1b4b] truncate whitespace-nowrap min-w-0">{crumb}</span>
       </div>
 
       {/* Right: profile pill */}

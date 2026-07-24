@@ -82,6 +82,12 @@ export default function AttendancePage() {
         }
         setProfile(prof as Profile);
 
+        // Le leader n'a pas accès à la page des présences (c'est au berger de pointer)
+        if (prof.role === "leader") {
+          router.push("/");
+          return;
+        }
+
         // Fetch members for this user/group
         let query = supabase.from("members").select("*").is("archived_at", null).neq("status", "archived").order("first_name", { ascending: true });
         if (hasOwnScope(prof.role)) {

@@ -125,6 +125,7 @@ export default function AdminSidebar() {
       )}
 
       <aside
+        data-testid="admin-sidebar"
         className={`bg-white text-[#1e1b4b] flex flex-col justify-between shrink-0 border-r border-slate-200/80 shadow-[0_4px_24px_-4px_rgba(30,27,75,0.04)] fixed md:sticky top-0 left-0 h-screen overflow-y-auto z-50 transition-transform md:transition-all duration-300 w-64 ${
           collapsed ? "md:w-20" : "md:w-64"
         } ${mobileOpen ? "translate-x-0" : "-translate-x-full"} md:translate-x-0`}
@@ -174,6 +175,7 @@ export default function AdminSidebar() {
               <Link
                 key={item.href}
                 href={item.href}
+                data-testid={`sidebar-${item.href.split('/').pop()}`}
                 className={`group flex items-center gap-3.5 px-3.5 py-3 rounded-2xl transition-all duration-200 ${
                   isActive
                     ? "bg-gradient-to-r from-[#1e1b4b] to-[#312e81] text-white font-bold shadow-md shadow-indigo-950/20 border border-[#fea619]/30"
@@ -226,6 +228,7 @@ export default function AdminSidebar() {
 
         <Link
           href="/"
+          data-testid="sidebar-return-pastoral"
           className="w-full flex items-center justify-center gap-2.5 px-3.5 py-3 rounded-2xl bg-gradient-to-r from-[#1e1b4b] to-[#312e81] hover:from-[#312e81] hover:to-[#4338ca] text-[#fea619] text-xs font-bold transition-all border border-[#fea619]/40 shadow-lg shadow-indigo-950/20"
           title="Retour au Tableau de Bord Pastoral"
         >

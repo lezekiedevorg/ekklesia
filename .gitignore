@@ -45,4 +45,6 @@ next-env.d.ts
 *.png
 /.opencode/
 /.stitch/
+/.mimocode/
+/e2e/test-results/
 
