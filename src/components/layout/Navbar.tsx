@@ -159,8 +159,12 @@ export default function Navbar({ role = "shepherd", groupName, userName }: Navba
       </header>
 
       {/* Mobile Bottom Floating Island Nav - Luxe iOS Sanctuary Style */}
+      {(() => {
+        const colCount = navItems.length + ((role === "super_admin" || role === "admin") ? 1 : 0);
+        const gridColsClass = colCount === 5 ? "grid-cols-5" : colCount === 6 ? "grid-cols-6" : "grid-cols-7";
+        return (
       <nav className="lg:hidden fixed bottom-4 left-4 right-4 z-50 bg-white/95 backdrop-blur-2xl border border-slate-200/90 rounded-3xl shadow-[0_12px_40px_rgba(30,27,75,0.15)] px-2.5 py-2 max-w-lg mx-auto">
-        <div className={`grid ${navItems.length + ((role === "super_admin" || role === "admin") ? 1 : 0)} gap-1`}>
+        <div className={`grid ${gridColsClass} gap-1`}>
           {navItems.map((item) => {
             const isActive = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href));
             return (
@@ -210,6 +214,8 @@ export default function Navbar({ role = "shepherd", groupName, userName }: Navba
           )}
         </div>
       </nav>
+        );
+      })()}
     </>
   );
 }

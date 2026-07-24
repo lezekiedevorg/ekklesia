@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { createClient } from "@/lib/supabase/server";
 import Navbar from "@/components/layout/Navbar";
+import { ServiceWorkerRegister } from "./sw-register";
 
 export const metadata: Metadata = {
   title: "Gestion Église - Suivi des Bergers et Âmes",
@@ -57,6 +58,7 @@ export default async function RootLayout({
         />
       </head>
       <body className="min-h-full flex flex-col bg-gradient-to-br from-slate-50 via-[#f8fafc] to-[#f1f5f9]">
+        <ServiceWorkerRegister />
         {profile && (
           <Navbar
             role={profile.role}
