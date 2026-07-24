@@ -7,7 +7,7 @@ import { ServiceWorkerRegister } from "./sw-register";
 export const metadata: Metadata = {
   title: "Gestion Église - Suivi des Bergers et Âmes",
   description: "Application PWA de suivi spirituel, de gestion des âmes, de présences et de rapports pour bergers, responsables et pasteur.",
-  manifest: "/manifest.json",
+  icons: { apple: "/icon-192.png" },
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
