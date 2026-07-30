@@ -350,7 +350,10 @@ export default function NewcomersPage() {
                         ? "bg-emerald-50 text-emerald-700 border-emerald-200"
                         : "bg-amber-50 text-amber-700 border-amber-200"
                     }`}>
-                      {reg.member?.status === "member" ? "Intégré" : `Intégration ${reg.member?.consecutive_sundays_present}/4`}
+                      {reg.member?.status === "member" || (reg.member?.consecutive_sundays_present ?? 0) >= 4
+                        ? "Intégré"
+                        : `Intégration ${reg.member?.consecutive_sundays_present}/4`
+                      }
                     </span>
                   </div>
                 </div>

@@ -534,7 +534,10 @@ export default function AttendancePage() {
                   </span>
                   {activeMember.status === "new" && (
                     <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
-                      ✨ Nouveau {activeMember.consecutive_sundays_present}/4
+                      {activeMember.consecutive_sundays_present >= 4
+                        ? "✨ Intégré"
+                        : `✨ Nouveau ${activeMember.consecutive_sundays_present}/4`
+                      }
                     </span>
                   )}
                   {activeMember.status === "absent_to_relaunch" && (

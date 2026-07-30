@@ -92,6 +92,7 @@ export default function ShepherdActivitiesPage() {
         const { data: actData } = await supabase
           .from("shepherd_activities")
           .select("*")
+          .eq("shepherd_id", prof.id)
           .order("week_start_date", { ascending: false });
 
         if (actData) {
@@ -141,11 +142,8 @@ export default function ShepherdActivitiesPage() {
           .from("members")
           .select("id, first_name, last_name, status, current_class, archived_at")
           .is("archived_at", null)
-          .neq("status", "archived");
-
-        if (profile.role === "shepherd") {
-          memQuery = memQuery.eq("shepherd_id", profile.id);
-        }
+          .neq("status", "archived")
+          .eq("shepherd_id", profile.id);
         const { data: mems } = await memQuery;
         const membersList = (mems as Member[]) || [];
         const memIds = membersList.map((m) => m.id);

@@ -704,13 +704,13 @@ export default function ReportsPage() {
                 {profile?.role === "pastor" ? "Rapports & Vision Globale" : "Rapports Dominiceaux"}
               </h1>
               <p className="text-[#47464f] text-xs sm:text-sm mt-1 font-medium">
-                {profile?.role === "shepherd"
+                {hasOwnScope(profile?.role)
                   ? "Consultez l'aperçu consolidé de votre travail dominical et soumettez votre rapport au responsable."
                   : "Examinez, validez et suivez l'évolution des groupes et la fidélité des âmes."}
               </p>
             </div>
 
-            {profile?.role === "shepherd" && (
+            {hasOwnScope(profile?.role) && (
               <WeekSelector
                 selectedDate={selectedDate}
                 onChangeDate={(newDateStr) => {
@@ -788,8 +788,8 @@ export default function ReportsPage() {
           </div>
         )}
 
-        {/* If Shepherd: Consolidation Preview Card (Task 6.2 & 6.3) */}
-        {profile?.role === "shepherd" && previewData && (
+        {/* If Shepherd (or admin/super_admin in personal scope): Consolidation Preview Card */}
+        {hasOwnScope(profile?.role) && previewData && (
           <div className="bg-gradient-to-br from-[#1e1b4b] via-[#2d2a6e] to-[#1e1b4b] text-white border border-[#fea619]/40 rounded-3xl p-6 sm:p-8 shadow-2xl shadow-indigo-950/40 space-y-7 relative overflow-hidden">
             {/* Glow effect */}
             <div className="absolute -right-20 -top-20 w-80 h-80 bg-[#fea619]/15 rounded-full blur-3xl pointer-events-none" />
@@ -949,7 +949,7 @@ export default function ReportsPage() {
                       <li key={idx} className="flex justify-between items-center p-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all">
                         <span className="font-black text-white">{newM.name}</span>
                         <span className="px-3 py-1 rounded-lg bg-[#fea619]/20 text-[#fea619] font-black border border-[#fea619]/30 shadow-2xs">
-                          {newM.count} / 4 Dimanches
+                          {newM.count >= 4 ? "✓ Intégré" : `${newM.count} / 4 Dimanches`}
                         </span>
                       </li>
                     ))}
@@ -983,7 +983,7 @@ export default function ReportsPage() {
           <div className="flex items-center justify-between border-b border-slate-200/60 pb-5">
             <h2 className="text-xl sm:text-2xl font-headline-md font-extrabold text-[#1e1b4b] flex items-center gap-3">
               <span className="w-3.5 h-3.5 rounded-full bg-gradient-to-tr from-[#1e1b4b] to-[#fea619] shadow-sm shadow-[#1e1b4b]/30" />
-              <span>{profile?.role === "shepherd" ? "Vos Rapports Soumis" : "Rapports Hebdomadaires Reçus"}</span>
+              <span>{hasOwnScope(profile?.role) ? "Vos Rapports Soumis" : "Rapports Hebdomadaires Reçus"}</span>
             </h2>
             <span className="px-3.5 py-1.5 rounded-full text-xs font-label-caps font-extrabold uppercase tracking-wider bg-[#1e1b4b] text-white border border-[#fea619]/40 shadow-2xs">
               {filteredReports.length} rapport(s) affiché(s)

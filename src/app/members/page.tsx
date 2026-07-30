@@ -681,7 +681,10 @@ export default function MembersPage() {
                           Dimanches présents :
                         </span>
                         <span className="font-extrabold text-[#1e1b4b] bg-indigo-50/80 px-2.5 py-0.5 rounded-lg border border-indigo-200/60 shadow-2xs whitespace-nowrap shrink-0 font-stat-mono text-xs">
-                          {member.consecutive_sundays_present} / 4 Dim.
+                          {member.consecutive_sundays_present >= 4
+                            ? <span className="text-emerald-700">✓ Intégré ({member.consecutive_sundays_present} Dim.)</span>
+                            : `${member.consecutive_sundays_present} / 4 Dim.`
+                          }
                         </span>
                       </div>
 
