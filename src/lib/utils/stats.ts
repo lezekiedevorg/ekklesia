@@ -433,6 +433,157 @@ function computeShepherdScore(data: {
   return Math.round(weightedScore * 10) / 10;
 }
 
+// ---------------------------------------------------------------------------
+// Member individual stats
+// ---------------------------------------------------------------------------
+
+export type RegularityLevel = "regular" | "moderate" | "irregular" | "absent";
+
+export interface MemberProgramStat {
+  programId: string;
+  label: string;
+  icon: string;
+  eligible: boolean;
+  presentCount: number;
+  totalCount: number;
+  rate: number;
+}
+
+export interface MemberStats {
+  overallAttendanceRate: number;
+  regularityLevel: RegularityLevel;
+  regularityLabel: string;
+  activeWeeksCount: number;
+  totalWeeksCount: number;
+  lastSeenDate: string | null;
+  byProgram: MemberProgramStat[];
+}
+
+function getRegularityLevel(rate: number): { level: RegularityLevel; label: string } {
+  if (rate >= 75) return { level: "regular", label: "Régulier" };
+  if (rate >= 50) return { level: "moderate", label: "Modéré" };
+  if (rate >= 25) return { level: "irregular", label: "Irrégulier" };
+  return { level: "absent", label: "Absent" };
+}
+
+function countWeeksBetween(start: string, end: string): number {
+  const startDate = new Date(start + "T00:00:00");
+  const endDate = new Date(end + "T00:00:00");
+  const diffMs = endDate.getTime() - startDate.getTime();
+  return Math.max(1, Math.ceil(diffMs / (7 * 24 * 60 * 60 * 1000)));
+}
+
+export async function getMemberStats(memberId: string, period?: Period): Promise<MemberStats> {
+  const supabase = await createClient();
+
+  const now = new Date();
+  const defaultPeriod: Period = {
+    start: new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+    end: now.toISOString().split("T")[0],
+  };
+  const p = period || defaultPeriod;
+
+  const [memberRes, attendanceRes] = await Promise.all([
+    supabase.from("members").select("current_class, last_seen_date").eq("id", memberId).single(),
+    supabase.from("attendance").select("program_type, is_present, date").eq("member_id", memberId).gte("date", p.start).lte("date", p.end),
+  ]);
+
+  const memberClass = memberRes.data?.current_class || "none";
+  const lastSeenDate = memberRes.data?.last_seen_date || null;
+  const attendance = attendanceRes.data || [];
+
+  // Per-program stats with eligibility
+  const byProgram: MemberProgramStat[] = PROGRAM_DEFINITIONS.map((prog) => {
+    const eligible = !prog.eligibility_class || memberClass === prog.eligibility_class;
+    const progRecords = attendance.filter((a) => a.program_type === prog.id);
+    const presentCount = progRecords.filter((a) => a.is_present).length;
+    const totalCount = progRecords.length;
+    const rate = eligible && totalCount > 0 ? Math.round((presentCount / totalCount) * 100) : 0;
+
+    return {
+      programId: prog.id,
+      label: prog.label,
+      icon: prog.icon,
+      eligible,
+      presentCount,
+      totalCount,
+      rate,
+    };
+  });
+
+  // Overall rate (only eligible programs)
+  const eligiblePrograms = byProgram.filter((p) => p.eligible && p.totalCount > 0);
+  const overallAttendanceRate =
+    eligiblePrograms.length > 0
+      ? Math.round(eligiblePrograms.reduce((sum, p) => sum + p.rate, 0) / eligiblePrograms.length)
+      : 0;
+
+  const { level: regularityLevel, label: regularityLabel } = getRegularityLevel(overallAttendanceRate);
+
+  // Active weeks (at least 1 present in any program)
+  const weeksWithPresence = new Set<string>();
+  for (const rec of attendance) {
+    if (rec.is_present) {
+      const { monday } = getWeekRange(rec.date);
+      weeksWithPresence.add(monday);
+    }
+  }
+
+  const totalWeeksCount = countWeeksBetween(p.start, p.end);
+
+  return {
+    overallAttendanceRate,
+    regularityLevel,
+    regularityLabel,
+    activeWeeksCount: weeksWithPresence.size,
+    totalWeeksCount,
+    lastSeenDate,
+    byProgram,
+  };
+}
+
+export async function getMemberAttendanceTrend(
+  memberId: string,
+  startDate: string,
+  endDate: string,
+  granularity: "week" | "month" = "week"
+): Promise<AttendanceTrendPoint[]> {
+  const supabase = await createClient();
+
+  const { data: attendance } = await supabase
+    .from("attendance")
+    .select("program_type, is_present, date")
+    .eq("member_id", memberId)
+    .gte("date", startDate)
+    .lte("date", endDate);
+
+  const grouped: Record<string, Record<string, { present: number; total: number }>> = {};
+
+  for (const rec of attendance || []) {
+    let periodKey: string;
+    if (granularity === "week") {
+      const { monday } = getWeekRange(rec.date);
+      periodKey = monday;
+    } else {
+      periodKey = rec.date.substring(0, 7);
+    }
+
+    if (!grouped[periodKey]) grouped[periodKey] = {};
+    if (!grouped[periodKey][rec.program_type]) grouped[periodKey][rec.program_type] = { present: 0, total: 0 };
+    grouped[periodKey][rec.program_type].total++;
+    if (rec.is_present) grouped[periodKey][rec.program_type].present++;
+  }
+
+  return Object.entries(grouped)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([period, programs]) => ({
+      period,
+      programs: Object.fromEntries(
+        Object.entries(programs).map(([prog, stats]) => [prog, stats.total > 0 ? Math.round((stats.present / stats.total) * 100) : 0])
+      ),
+    }));
+}
+
 export async function compareEntities(
   entities: { type: "group" | "shepherd" | "department"; id: string; name: string }[],
   metrics: string[],

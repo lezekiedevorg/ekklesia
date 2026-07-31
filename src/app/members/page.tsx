@@ -819,16 +819,26 @@ export default function MembersPage() {
                       )}
                     </div>
 
-                    <div className="pt-2.5 border-t border-slate-100/80 flex items-center justify-between gap-2">
+                    <div className="pt-2.5 border-t border-slate-100/80 flex items-center gap-1.5">
+                      <button
+                        onClick={() => router.push(`/members/${member.id}`)}
+                        className="flex-1 py-2 px-2 rounded-xl text-[11px] font-bold bg-indigo-50/80 hover:bg-indigo-100 text-indigo-700 hover:text-indigo-900 border border-indigo-200 hover:border-indigo-300 transition-all flex items-center justify-center gap-1 cursor-pointer truncate shadow-2xs"
+                        title="Voir les statistiques de fréquentation"
+                      >
+                        <span className="material-symbols-outlined text-[14px]">
+                          analytics
+                        </span>
+                        <span className="hidden sm:inline">Stats</span>
+                      </button>
                       <button
                         onClick={() => openEditModal(member)}
-                        className="flex-1 py-2 px-3 rounded-xl text-xs font-bold bg-slate-100/80 hover:bg-indigo-50 text-slate-700 hover:text-[#1e1b4b] border border-slate-200/80 hover:border-indigo-200 transition-all flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap shadow-2xs"
+                        className="flex-1 py-2 px-2 rounded-xl text-[11px] font-bold bg-slate-100/80 hover:bg-indigo-50 text-slate-700 hover:text-[#1e1b4b] border border-slate-200/80 hover:border-indigo-200 transition-all flex items-center justify-center gap-1 cursor-pointer truncate shadow-2xs"
                         title="Modifier les informations ou le statut"
                       >
-                        <span className="material-symbols-outlined text-[15px]">
+                        <span className="material-symbols-outlined text-[14px]">
                           edit
-                        </span>{" "}
-                        Modifier
+                        </span>
+                        <span className="hidden sm:inline">Modifier</span>
                       </button>
                       <button
                         onClick={() => {
@@ -840,13 +850,13 @@ export default function MembersPage() {
                             handleArchiveMember(member.id);
                           }
                         }}
-                        className="flex-1 py-2 px-3 rounded-xl text-xs font-bold bg-amber-50/80 hover:bg-amber-100 text-amber-800 hover:text-amber-900 border border-amber-200 hover:border-amber-300 transition-all flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap shadow-2xs"
+                        className="flex-1 py-2 px-2 rounded-xl text-[11px] font-bold bg-amber-50/80 hover:bg-amber-100 text-amber-800 hover:text-amber-900 border border-amber-200 hover:border-amber-300 transition-all flex items-center justify-center gap-1 cursor-pointer truncate shadow-2xs"
                         title="Archiver ce fidèle (Purgatoire 90 jours)"
                       >
-                        <span className="material-symbols-outlined text-[15px]">
+                        <span className="material-symbols-outlined text-[14px]">
                           archive
-                        </span>{" "}
-                        Archiver
+                        </span>
+                        <span className="hidden sm:inline">Archiver</span>
                       </button>
                     </div>
                   </div>
