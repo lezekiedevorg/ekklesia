@@ -21,6 +21,8 @@ export default function Navbar({ role = "shepherd", groupName, userName }: Navba
     { name: "Présences", testId: "attendance", href: "/attendance", icon: "event_available", leaderOnly: false },
     { name: "Discipline", testId: "activities", href: "/activities", icon: "auto_awesome", leaderOnly: false },
     { name: "Alertes", testId: "alerts", href: "/alerts", icon: "notifications_active" },
+    { name: "Messages", testId: "messages", href: "/messages", icon: "chat", leaderOnly: false },
+    { name: "Conversations", testId: "conversations", href: "/conversations", icon: "smart_toy", leaderOnly: false },
     { name: "Rapports", testId: "reports", href: "/reports", icon: "assessment" },
   ];
 

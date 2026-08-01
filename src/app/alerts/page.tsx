@@ -44,6 +44,7 @@ export default function AlertsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [sendingWhatsApp, setSendingWhatsApp] = useState<string | null>(null);
 
   // Visit Modal State
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
@@ -184,6 +185,37 @@ export default function AlertsPage() {
     }
   };
 
+  const handleSendWhatsApp = async (member: Member) => {
+    if (!member.phone) {
+      alert("Ce membre n'a pas de numéro de téléphone");
+      return;
+    }
+
+    setSendingWhatsApp(member.id);
+    try {
+      const response = await fetch("/api/whatsapp/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          memberId: member.id,
+          message: `Bonjour ${member.first_name} ! 💝\n\nNous avons remarqué votre absence récente aux programmes de l'église. Nous pensons à vous et prions pour vous.\n\nY a-t-il quelque chose dont vous avez besoin ? Comment puis-je vous aider ?\n\n${profile?.first_name} ${profile?.last_name}`,
+        }),
+      });
+
+      const data = await response.json();
+      if (data.sent > 0) {
+        setMessage(`Message WhatsApp envoyé à ${member.first_name} ${member.last_name} !`);
+      } else {
+        alert(`Erreur: ${data.results?.[0]?.error || "Envoi échoué"}`);
+      }
+    } catch (err) {
+      console.error("Erreur envoi WhatsApp:", err);
+      alert("Erreur lors de l'envoi du message WhatsApp");
+    } finally {
+      setSendingWhatsApp(null);
+    }
+  };
+
   if (loading) {
     return <PageLoader label="Chargement des alertes pastorales..." />;
   }
@@ -292,13 +324,29 @@ export default function AlertsPage() {
                     </div>
                   </div>
 
-                  <button
-                    onClick={() => handleOpenVisitModal(member)}
-                    className="w-full py-3.5 px-4 rounded-2xl font-black text-xs text-white bg-gradient-to-r from-rose-600 via-red-600 to-[#1e1b4b] hover:from-rose-700 hover:to-[#312e81] shadow-md shadow-rose-500/20 hover:shadow-lg hover:shadow-rose-500/30 transition-all transform group-hover:scale-[1.01] active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer border border-white/20 mt-2"
-                  >
-                    <span className="material-symbols-outlined text-[16px]">handshake</span>
-                    <span>Enregistrer Visite / Relance</span>
-                  </button>
+                  <div className="flex gap-2 mt-2">
+                    <button
+                      onClick={() => handleOpenVisitModal(member)}
+                      className="flex-1 py-3.5 px-4 rounded-2xl font-black text-xs text-white bg-gradient-to-r from-rose-600 via-red-600 to-[#1e1b4b] hover:from-rose-700 hover:to-[#312e81] shadow-md shadow-rose-500/20 hover:shadow-lg hover:shadow-rose-500/30 transition-all transform group-hover:scale-[1.01] active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer border border-white/20"
+                    >
+                      <span className="material-symbols-outlined text-[16px]">handshake</span>
+                      <span>Visite / Relance</span>
+                    </button>
+                    {member.phone && (
+                      <button
+                        onClick={() => handleSendWhatsApp(member)}
+                        disabled={sendingWhatsApp === member.id}
+                        className="py-3.5 px-4 rounded-2xl font-black text-xs text-white bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 shadow-md shadow-emerald-500/20 hover:shadow-lg hover:shadow-emerald-500/30 transition-all transform active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer border border-white/20 disabled:opacity-50"
+                      >
+                        {sendingWhatsApp === member.id ? (
+                          <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        ) : (
+                          <span className="material-symbols-outlined text-[16px]">chat</span>
+                        )}
+                        <span>WhatsApp</span>
+                      </button>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
