@@ -9,9 +9,18 @@ interface ProgramsPresenceCardProps {
   programsSummary: ProgramSummaryItem[];
   form: Record<string, any>;
   setForm: React.Dispatch<React.SetStateAction<any>>;
+  selectedWeek?: string;
 }
 
-export function ProgramsPresenceCard({ programsSummary, form, setForm }: ProgramsPresenceCardProps) {
+export function ProgramsPresenceCard({ programsSummary, form, setForm, selectedWeek }: ProgramsPresenceCardProps) {
+  const currentWeek = selectedWeek || "";
+
+  // Build the attendance link with the first available program and the current week
+  const firstProgram = programsSummary?.[0]?.program_type || "sunday_service";
+  const attendanceHref = currentWeek
+    ? `/attendance?program=${encodeURIComponent(firstProgram)}&week=${encodeURIComponent(currentWeek)}`
+    : `/attendance?program=${encodeURIComponent(firstProgram)}`;
+
   return (
     <div className="glass-panel p-5 sm:p-6 space-y-5">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200/60 pb-3.5">
@@ -25,7 +34,7 @@ export function ProgramsPresenceCard({ programsSummary, form, setForm }: Program
           </p>
         </div>
         <Link
-          href="/attendance"
+          href={attendanceHref}
           className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-indigo-500 to-[#1e1b4b] hover:from-[#1e1b4b] hover:to-indigo-900 text-white text-xs font-bold transition-all duration-300 self-start sm:self-auto shrink-0 shadow-md shadow-indigo-950/20 active:scale-95"
         >
           <span>📋 Faire le pointage</span>
@@ -70,9 +79,14 @@ export function ProgramsPresenceCard({ programsSummary, form, setForm }: Program
                 ? "bg-amber-100/90 text-amber-800 border-amber-300/80"
                 : "bg-rose-100/90 text-rose-800 border-rose-300/80";
 
+            const cardHref = currentWeek
+              ? `/attendance?program=${encodeURIComponent(prog.program_type)}&week=${encodeURIComponent(currentWeek)}`
+              : `/attendance?program=${encodeURIComponent(prog.program_type)}`;
+
             return (
-              <div
+              <Link
                 key={prog.program_type}
+                href={cardHref}
                 className="p-4 rounded-2xl border border-slate-200/80 bg-white/70 hover:bg-white flex flex-col justify-between gap-3 hover:border-indigo-300/80 transition-all duration-300 shadow-2xs hover:shadow-md"
               >
                 <div className="flex items-start justify-between gap-3">
@@ -95,7 +109,7 @@ export function ProgramsPresenceCard({ programsSummary, form, setForm }: Program
                     </span>
                   </span>
                 </div>
-              </div>
+              </Link>
             );
           })
         ) : (

@@ -294,7 +294,7 @@ export default function ShepherdActivitiesPage() {
         <form onSubmit={handleSubmit} className="space-y-6">
           <DailyDisciplinesSection form={form} setForm={setForm} selectQI={selectQI} />
           <PastoralActionsSection form={form} setForm={setForm} />
-          <ProgramsPresenceCard programsSummary={programsSummary} form={form} setForm={setForm} />
+          <ProgramsPresenceCard programsSummary={programsSummary} form={form} setForm={setForm} selectedWeek={selectedWeek} />
           <MonthlyActivitiesSection form={form} setForm={setForm} />
           <ObservationsSection form={form as any} setForm={setForm} absentees={absentees} />
 

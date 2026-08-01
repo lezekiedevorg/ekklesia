@@ -63,6 +63,11 @@ export function getMondayDateStr(dateStr?: string): string {
   return monday.toISOString().split("T")[0];
 }
 
+export function getDayOfWeekIndex(day: "monday" | "tuesday" | "wednesday" | "thursday" | "friday" | "saturday" | "sunday"): number {
+  const map: Record<string, number> = { monday: 1, tuesday: 2, wednesday: 3, thursday: 4, friday: 5, saturday: 6, sunday: 0 };
+  return map[day] ?? 0;
+}
+
 export function getSundayDateStr(dateStr?: string): string {
   const mondayStr = getMondayDateStr(dateStr);
   const parts = mondayStr.split("-").map(Number);

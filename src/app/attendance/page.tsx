@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import PageLoader from "@/components/common/PageLoader";
 import { hasGlobalScope, hasOwnScope } from "@/lib/auth/roles";
 import { createClient } from "@/lib/supabase/client";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import WeekSelector from "@/components/common/WeekSelector";
+import { getDayOfWeekIndex } from "@/lib/utils/dateFormatter";
 import { getProgramsClient } from "@/lib/utils/programs-data";
 import { PROGRAM_DEFINITIONS, ProgramDefinition } from "@/lib/constants/programs";
 
@@ -57,8 +58,58 @@ export default function AttendancePage() {
   // Motif d'absence (tous programmes) : member_id -> motif
   const [absenceReasons, setAbsenceReasons] = useState<Record<string, string>>({});
 
+  // Week overview state: { "YYYY-MM-DD_memberId": boolean }
+  const [weekAttendance, setWeekAttendance] = useState<Record<string, boolean>>({});
+  const [weekOverviewOpen, setWeekOverviewOpen] = useState(true);
+
+  // Day -> program mapping for week view
+  const dayProgramMap: Record<number, string> = {
+    0: "sunday_service", 1: "", 2: "tuesday_class", 3: "wednesday_class",
+    4: "thursday_online", 5: "friday_service", 6: "",
+  };
+
   const supabase = createClient();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const queryAppliedRef = useRef(false);
+
+  // Programme -> jour de la semaine pour déduire la date automatiquement
+  const programDayMap: Record<string, "monday" | "tuesday" | "wednesday" | "thursday" | "friday" | "saturday" | "sunday"> = {
+    tuesday_class: "tuesday",
+    wednesday_class: "wednesday",
+    thursday_online: "thursday",
+    friday_service: "friday",
+    sunday_service: "sunday",
+  };
+
+  // Apply query params from activities page: ?program=...&week=...
+  useEffect(() => {
+    if (queryAppliedRef.current) return;
+    const programParam = searchParams.get("program");
+    const weekParam = searchParams.get("week");
+    if (programParam) {
+      setSelectedProgram(programParam);
+      if (weekParam) {
+        const dayName = programDayMap[programParam];
+        if (dayName) {
+          const parts = weekParam.split("-").map(Number);
+          if (parts.length >= 3 && !isNaN(parts[0])) {
+            const monday = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2]));
+            const targetDay = getDayOfWeekIndex(dayName);
+            const currentDay = monday.getUTCDay();
+            const diff = ((targetDay - currentDay + 7) % 7);
+            const target = new Date(monday);
+            target.setUTCDate(monday.getUTCDate() + diff);
+            const y = target.getUTCFullYear();
+            const m = String(target.getUTCMonth() + 1).padStart(2, "0");
+            const d = String(target.getUTCDate()).padStart(2, "0");
+            setSelectedDate(`${y}-${m}-${d}`);
+          }
+        }
+      }
+      queryAppliedRef.current = true;
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     async function loadData() {
@@ -112,46 +163,156 @@ export default function AttendancePage() {
     loadData();
   }, [router, supabase]);
 
-  // Fetch existing attendance for selected date and program
+  // Auto-adjust selectedDate when program changes: each program has its day of the week
   useEffect(() => {
-    async function loadAttendance() {
+    const dayName = programDayMap[selectedProgram];
+    if (!dayName) return;
+    const parts = selectedDate.split("-").map(Number);
+    const d = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2]));
+    const currentDow = d.getUTCDay();
+    const targetDow = getDayOfWeekIndex(dayName);
+    if (currentDow === targetDow) return;
+    // Go to Monday, then offset to target day
+    const diffToMonday = currentDow === 0 ? -6 : 1 - currentDow;
+    const monday = new Date(d);
+    monday.setUTCDate(d.getUTCDate() + diffToMonday);
+    const offsetFromMonday = targetDow === 0 ? 6 : targetDow - 1;
+    const target = new Date(monday);
+    target.setUTCDate(monday.getUTCDate() + offsetFromMonday);
+    const y = target.getUTCFullYear();
+    const m = String(target.getUTCMonth() + 1).padStart(2, "0");
+    const dd = String(target.getUTCDate()).padStart(2, "0");
+    setSelectedDate(`${y}-${m}-${dd}`);
+  }, [selectedProgram]);
+
+  // Compute day view attendance directly from weekAttendance (no DB query needed)
+  useEffect(() => {
+    if (!profile || members.length === 0) return;
+    const prog = programs.find((p) => p.id === selectedProgram);
+    const eligible = members.filter((m) => {
+      if (m.archived_at) return false;
+      if (prog?.eligibility_class) return m.current_class === prog.eligibility_class;
+      return true;
+    });
+    const state: Record<string, boolean> = {};
+    eligible.forEach((m) => {
+      const val = weekAttendance[`${selectedDate}_${m.id}`];
+      if (val !== undefined) state[m.id] = val;
+    });
+    setAttendanceState(state);
+  }, [selectedDate, selectedProgram, weekAttendance, members, programs, profile]);
+
+  // Load week attendance data for ALL programs (week overview)
+  useEffect(() => {
+    async function loadWeekAttendance() {
       if (!profile || members.length === 0) return;
       try {
-        const { data: existingAtt } = await supabase
+        const parts = selectedDate.split("-").map(Number);
+        const d = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2]));
+        const dayOfWeek = d.getUTCDay();
+        const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+        const monday = new Date(d);
+        monday.setUTCDate(d.getUTCDate() + diffToMonday);
+
+        const weekDates: string[] = [];
+        for (let i = 0; i < 7; i++) {
+          const date = new Date(monday);
+          date.setUTCDate(monday.getUTCDate() + i);
+          const y = date.getUTCFullYear();
+          const m = String(date.getUTCMonth() + 1).padStart(2, "0");
+          const dd = String(date.getUTCDate()).padStart(2, "0");
+          weekDates.push(`${y}-${m}-${dd}`);
+        }
+
+        const mondayStr = weekDates[0];
+        const sundayStr = weekDates[6];
+
+        // Fetch ALL attendance for the week (all programs)
+        const { data: weekAttData } = await supabase
           .from("attendance")
-          .select("member_id, is_present")
-          .eq("date", selectedDate)
-          .eq("program_type", selectedProgram);
+          .select("member_id, is_present, date, program_type")
+          .gte("date", mondayStr)
+          .lte("date", sundayStr);
 
-        const newAttState: Record<string, boolean> = {};
-        existingAtt?.forEach((rec) => {
-          newAttState[rec.member_id] = rec.is_present;
+        // Build weekAttendance grid with composite keys
+        const grid: Record<string, boolean> = {};
+        (weekAttData || []).forEach((rec: any) => {
+          grid[`${rec.date}_${rec.member_id}`] = rec.is_present;
         });
-        setAttendanceState(newAttState);
-
-        const { data: existingAbs } = await supabase
-          .from("sunday_absences")
-          .select("member_id, reason")
-          .eq("date", selectedDate)
-          .eq("program_type", selectedProgram);
-
-        const newReasons: Record<string, string> = {};
-        existingAbs?.forEach((rec) => {
-          newReasons[rec.member_id] = rec.reason;
-        });
-        setAbsenceReasons(newReasons);
+        setWeekAttendance(grid);
       } catch (err) {
-        console.error("Erreur de chargement du détail de présence:", err);
+        console.error("Erreur chargement présences semaine:", err);
       }
     }
-    loadAttendance();
-  }, [selectedDate, selectedProgram, profile, members, supabase]);
+    loadWeekAttendance();
+  }, [selectedDate, profile, members, supabase]);
 
-  // Reset view mode when date or program changes
-  useEffect(() => {
-    setViewMode("list");
+  // Save all week attendance (all programs)
+  const handleSaveWeekAttendance = async () => {
+    setSaving(true);
     setMessage(null);
-  }, [selectedDate, selectedProgram]);
+    try {
+      const allRecords: { member_id: string; date: string; program_type: string; is_present: boolean }[] = [];
+      const isGlobalAdmin = hasGlobalScope(profile?.role);
+      Object.entries(weekAttendance).forEach(([key, isPresent]) => {
+        const lastUnderscore = key.lastIndexOf("_");
+        const date = key.substring(0, lastUnderscore);
+        const memberId = key.substring(lastUnderscore + 1);
+        // Skip locked dates (7-day rule + week boundary)
+        if (!isGlobalAdmin) {
+          const now = new Date();
+          const sel = new Date(date + "T00:00:00");
+          const diffDays = (now.getTime() - sel.getTime()) / (1000 * 3600 * 24);
+          if (diffDays > 7) return;
+          const todayDow = now.getDay();
+          const todayMon = new Date(now);
+          todayMon.setDate(now.getDate() - (todayDow === 0 ? 6 : todayDow - 1));
+          todayMon.setHours(0, 0, 0, 0);
+          const selDow = sel.getDay();
+          const selMon = new Date(sel);
+          selMon.setDate(sel.getDate() - (selDow === 0 ? 6 : selDow - 1));
+          selMon.setHours(0, 0, 0, 0);
+          if (todayMon.getTime() > selMon.getTime()) return;
+        }
+        // Determine program from the day of the week
+        const dateParts = date.split("-").map(Number);
+        const dateObj = new Date(Date.UTC(dateParts[0], dateParts[1] - 1, dateParts[2]));
+        const dow = dateObj.getUTCDay();
+        const progType = dayProgramMap[dow];
+        if (progType) {
+          allRecords.push({ member_id: memberId, date, program_type: progType, is_present: isPresent });
+        }
+      });
+
+      if (allRecords.length > 0) {
+        const { error } = await supabase
+          .from("attendance")
+          .upsert(allRecords, { onConflict: "member_id,date,program_type" });
+        if (error) throw error;
+      }
+
+      setMessage(`${allRecords.length} présences de la semaine enregistrées avec succès !`);
+
+      const { data: updatedMems } = await supabase.from("members").select("*").is("archived_at", null).neq("status", "archived");
+      if (updatedMems) {
+        setMembers((prev) =>
+          prev.map((m) => {
+            const updated = updatedMems.find((um) => um.id === m.id);
+            return updated ? (updated as Member) : m;
+          })
+        );
+      }
+    } catch (err: any) {
+      console.error(err);
+      const msg = err?.message || err?.error_description || JSON.stringify(err);
+      alert(`Erreur lors de l'enregistrement : ${msg}`);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // All active members (no program filter — used in week view)
+  const activeMembers = members.filter((m) => !m.archived_at);
 
   // Filter out archived members and match program rules
   const eligibleMembers = members.filter((m) => {
@@ -163,15 +324,59 @@ export default function AttendancePage() {
     return true; // programmes ouverts à tous
   });
 
-  // Calculate 7-day lock
+
+
+  // Reset view mode when date or program changes
+  useEffect(() => {
+    setViewMode("list");
+    setMessage(null);
+  }, [selectedDate, selectedProgram]);
+
+  // Calculate lock (day view): locked if more than 7 days ago OR if the week is past
   const isLocked = (() => {
     if (hasGlobalScope(profile?.role)) return false;
     const now = new Date();
     const sel = new Date(selectedDate + "T00:00:00");
     const diffTime = now.getTime() - sel.getTime();
     const diffDays = diffTime / (1000 * 3600 * 24);
-    return diffDays > 7;
+    if (diffDays > 7) return true;
+
+    // Week boundary lock
+    const todayDay = now.getDay();
+    const todayMonday = new Date(now);
+    todayMonday.setDate(now.getDate() - (todayDay === 0 ? 6 : todayDay - 1));
+    todayMonday.setHours(0, 0, 0, 0);
+
+    const selDay = sel.getDay();
+    const selMonday = new Date(sel);
+    selMonday.setDate(sel.getDate() - (selDay === 0 ? 6 : selDay - 1));
+    selMonday.setHours(0, 0, 0, 0);
+
+    return todayMonday.getTime() > selMonday.getTime();
   })();
+
+  // Per-date lock check (week view): locked if more than 7 days ago OR if the week is past
+  const isDateLocked = (dateStr: string): boolean => {
+    if (hasGlobalScope(profile?.role)) return false;
+    const now = new Date();
+    const sel = new Date(dateStr + "T00:00:00");
+    const diffTime = now.getTime() - sel.getTime();
+    const diffDays = diffTime / (1000 * 3600 * 24);
+    if (diffDays > 7) return true;
+
+    // Week boundary lock: if today's Monday is after the date's Monday, the week is past
+    const todayDay = now.getDay();
+    const todayMonday = new Date(now);
+    todayMonday.setDate(now.getDate() - (todayDay === 0 ? 6 : todayDay - 1));
+    todayMonday.setHours(0, 0, 0, 0);
+
+    const selDay = sel.getDay();
+    const selMonday = new Date(sel);
+    selMonday.setDate(sel.getDate() - (selDay === 0 ? 6 : selDay - 1));
+    selMonday.setHours(0, 0, 0, 0);
+
+    return todayMonday.getTime() > selMonday.getTime();
+  };
 
   const advanceWizard = () => {
     if (currentIndex < eligibleMembers.length - 1) {
@@ -299,27 +504,29 @@ export default function AttendancePage() {
             </div>
           </div>
 
-          {/* Program Type Tabs */}
-          <div className="flex flex-wrap gap-2 mt-5 pt-5 border-t border-slate-200/60 relative z-10">
-            {programOptions.map((prog) => {
-              const isActive = selectedProgram === prog.id;
-              return (
-                <button
-                  key={prog.id}
-                  onClick={() => setSelectedProgram(prog.id)}
-                  title={prog.desc}
-                  className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 border ${
-                    isActive
-                      ? "bg-[#1e1b4b] text-white border-[#fea619]/60 shadow-md shadow-indigo-950/20"
-                      : "bg-white/70 text-slate-600 border-slate-200/80 hover:border-indigo-300 hover:text-[#1e1b4b]"
-                  }`}
-                >
-                  <span>{prog.icon}</span>
-                  {prog.label}
-                </button>
-              );
-            })}
-          </div>
+          {/* Program Type Tabs — visible uniquement en vue jour */}
+          {!weekOverviewOpen && (
+            <div className="flex flex-wrap gap-2 mt-5 pt-5 border-t border-slate-200/60 relative z-10">
+              {programOptions.map((prog) => {
+                const isActive = selectedProgram === prog.id;
+                return (
+                  <button
+                    key={prog.id}
+                    onClick={() => setSelectedProgram(prog.id)}
+                    title={prog.desc}
+                    className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 border ${
+                      isActive
+                        ? "bg-[#1e1b4b] text-white border-[#fea619]/60 shadow-md shadow-indigo-950/20"
+                        : "bg-white/70 text-slate-600 border-slate-200/80 hover:border-indigo-300 hover:text-[#1e1b4b]"
+                    }`}
+                  >
+                    <span>{prog.icon}</span>
+                    {prog.label}
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {message && (
@@ -332,8 +539,233 @@ export default function AttendancePage() {
           </div>
         )}
 
-        {/* VUE LISTE RAPIDE (par défaut) */}
+        {/* Toggle Vue Jour / Vue Semaine */}
         {viewMode === "list" && (
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setWeekOverviewOpen(false)}
+              className={`px-4 py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                !weekOverviewOpen
+                  ? "bg-[#1e1b4b] text-white border-[#fea619]/60"
+                  : "bg-white/70 text-slate-600 border-slate-200/80 hover:border-indigo-300"
+              }`}
+            >
+              Vue jour
+            </button>
+            <button
+              onClick={() => setWeekOverviewOpen(true)}
+              className={`px-4 py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                weekOverviewOpen
+                  ? "bg-[#1e1b4b] text-white border-[#fea619]/60"
+                  : "bg-white/70 text-slate-600 border-slate-200/80 hover:border-indigo-300"
+              }`}
+            >
+              Vue semaine
+            </button>
+          </div>
+        )}
+
+        {/* VUE SEMAINE GLOBALE : tous les programmes, tous les jours, éligibilité par programme */}
+        {viewMode === "list" && weekOverviewOpen && (() => {
+          const parts = selectedDate.split("-").map(Number);
+          const d = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2]));
+          const dayOfWeek = d.getUTCDay();
+          const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+          const monday = new Date(d);
+          monday.setUTCDate(d.getUTCDate() + diffToMonday);
+
+          const todayStr = new Date().toISOString().split("T")[0];
+
+          // Check if the entire week is locked (week is in the past)
+          const now = new Date();
+          const todayDow = now.getDay();
+          const todayMonday = new Date(now);
+          todayMonday.setDate(now.getDate() - (todayDow === 0 ? 6 : todayDow - 1));
+          todayMonday.setHours(0, 0, 0, 0);
+          const weekLocked = !hasGlobalScope(profile?.role) && monday.getTime() < todayMonday.getTime();
+
+          const weekDays = Array.from({ length: 7 }, (_, i) => {
+            const date = new Date(monday);
+            date.setUTCDate(monday.getUTCDate() + i);
+            const y = date.getUTCFullYear();
+            const m = String(date.getUTCMonth() + 1).padStart(2, "0");
+            const dd = String(date.getUTCDate()).padStart(2, "0");
+            const dateStr = `${y}-${m}-${dd}`;
+            const dow = date.getUTCDay();
+            const dayLabels = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"];
+            const shortLabels = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"];
+            const progId = dayProgramMap[dow];
+            const prog = programs.find((p) => p.id === progId);
+            const isToday = dateStr === todayStr;
+
+            // Compute eligible members for THIS day's program
+            const eligibleForDay = activeMembers.filter((m) => {
+              if (!prog) return false;
+              if (prog.eligibility_class) return m.current_class === prog.eligibility_class;
+              return true;
+            });
+            const eligibleIds = new Set(eligibleForDay.map((m) => m.id));
+
+            // Count present among eligible
+            let presentCount = 0;
+            eligibleForDay.forEach((m) => {
+              if (weekAttendance[`${dateStr}_${m.id}`] === true) presentCount++;
+            });
+
+            return { dateStr, dow, dayLabel: dayLabels[dow], shortLabel: shortLabels[dow], dayNum: date.getUTCDate(), month: String(date.getUTCMonth() + 1).padStart(2, "0"), prog, isToday, presentCount, eligibleCount: eligibleForDay.length, eligibleIds };
+          });
+
+          return (
+            <div className="glass-panel rounded-3xl border border-white/80 shadow-md overflow-hidden animate-fadeIn">
+              <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200/70 bg-white/50">
+                <h3 className="text-sm font-black text-[#1e1b4b]">
+                  Présences de la semaine — Tous les programmes
+                </h3>
+                <span className="text-xs text-slate-500 font-medium">
+                  {activeMembers.length} membre{activeMembers.length > 1 ? "s" : ""} actif{activeMembers.length > 1 ? "s" : ""}
+                </span>
+              </div>
+              {weekLocked && (
+                <div className="px-5 py-3 bg-amber-50/80 border-b border-amber-200 text-xs font-bold text-amber-900">
+                  🔒 Semaine passée — les présences sont en lecture seule.
+                </div>
+              )}
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="border-b border-slate-200/60 bg-slate-50/50">
+                      <th className="text-left px-4 py-2.5 font-extrabold text-slate-600 sticky left-0 bg-slate-50/80 z-10 min-w-[140px]">
+                        Membre
+                      </th>
+                      {weekDays.map((day, i) => {
+                        const dayLocked = day.prog && isDateLocked(day.dateStr);
+                        return (
+                        <th key={i} className={`px-2 py-2.5 text-center whitespace-nowrap min-w-[80px] ${day.isToday ? "bg-indigo-50" : ""}`}>
+                          <div className="font-extrabold text-slate-600 flex items-center justify-center gap-1">
+                            {day.shortLabel} {day.dayNum}/{day.month}
+                            {dayLocked && <span className="text-slate-300" title="Délai de 7 jours expiré">🔒</span>}
+                          </div>
+                          {day.prog ? (
+                            <>
+                              <div className="text-[10px] font-semibold text-slate-400 mt-0.5 flex items-center justify-center gap-1">
+                                <span>{day.prog.icon}</span>
+                                <span className="truncate max-w-[70px]">{day.prog.label.split("(")[0].trim()}</span>
+                              </div>
+                              <div className="text-[10px] font-bold text-emerald-600 mt-0.5">
+                                {day.presentCount}/{day.eligibleCount}
+                              </div>
+                            </>
+                          ) : (
+                            <div className="text-[10px] text-slate-300 mt-0.5">—</div>
+                          )}
+                        </th>
+                        );
+                      })}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {activeMembers.map((member) => (
+                      <tr key={member.id} className="border-b border-slate-100/60 hover:bg-indigo-50/30 transition-colors">
+                        <td className="px-4 py-2 sticky left-0 bg-white/90 z-10">
+                          <div className="flex items-center gap-2">
+                            <div className="w-6 h-6 shrink-0 rounded-md bg-gradient-to-tr from-[#1e1b4b] to-[#4338ca] text-white text-[9px] font-black flex items-center justify-center">
+                              {member.first_name[0]}{member.last_name[0]}
+                            </div>
+                            <span className="font-bold text-[#1e1b4b] truncate max-w-[100px]">
+                              {member.first_name} {member.last_name}
+                            </span>
+                          </div>
+                        </td>
+                        {weekDays.map((day, i) => {
+                          const key = `${day.dateStr}_${member.id}`;
+                          const val = weekAttendance[key];
+                          const isEligible = day.eligibleIds.has(member.id);
+                          const hasProg = !!day.prog;
+                          const locked = hasProg && isDateLocked(day.dateStr);
+                          return (
+                            <td key={i} className={`px-2 py-2 text-center ${day.isToday ? "bg-indigo-50/40" : ""}`}>
+                              {!hasProg ? (
+                                <span className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-slate-200 text-xs">—</span>
+                              ) : !isEligible ? (
+                                <span className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-slate-100 text-slate-300 text-[10px] border border-slate-200/50" title="Non éligible">
+                                  N/A
+                                </span>
+                              ) : locked ? (
+                                <span className={`inline-flex items-center justify-center w-8 h-8 rounded-lg font-black text-sm border ${
+                                  val === true
+                                    ? "bg-emerald-50 text-emerald-400 border-emerald-200/60"
+                                    : val === false
+                                    ? "bg-rose-50 text-rose-400 border-rose-200/60"
+                                    : "bg-slate-50 text-slate-200 border-slate-200/60"
+                                }`} title="Délai de 7 jours expiré">
+                                  {val === true ? "✓" : val === false ? "✕" : "—"}
+                                </span>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setWeekAttendance((prev) => {
+                                      const current = prev[key];
+                                      const next = current === true ? false : current === false ? undefined : true;
+                                      const updated = { ...prev };
+                                      if (next === undefined) {
+                                        delete updated[key];
+                                      } else {
+                                        updated[key] = next;
+                                      }
+                                      return updated;
+                                    });
+                                  }}
+                                  className={`inline-flex items-center justify-center w-8 h-8 rounded-lg font-black text-sm transition-all cursor-pointer border ${
+                                    val === true
+                                      ? "bg-emerald-100 text-emerald-700 border-emerald-300"
+                                      : val === false
+                                      ? "bg-rose-100 text-rose-700 border-rose-300"
+                                      : "bg-slate-50 text-slate-300 border-slate-200 hover:border-indigo-300"
+                                  }`}
+                                >
+                                  {val === true ? "✓" : val === false ? "✕" : "—"}
+                                </button>
+                              )}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    ))}
+                    {activeMembers.length === 0 && (
+                      <tr>
+                        <td colSpan={8} className="px-4 py-14 text-center text-slate-400 text-xs font-medium">
+                          Aucun membre actif.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Save button for week view */}
+              {activeMembers.length > 0 && (
+                <div className="px-5 py-4 border-t border-slate-200/60 flex items-center justify-between gap-3">
+                  {weekLocked && (
+                    <span className="text-[11px] font-bold text-amber-700 bg-amber-50 px-3 py-1.5 rounded-lg border border-amber-200">
+                      🔒 Semaine passée — lecture seule
+                    </span>
+                  )}
+                  <button
+                    onClick={handleSaveWeekAttendance}
+                    disabled={saving || weekLocked}
+                    className="px-6 py-3 rounded-2xl font-black text-xs text-[#1e1b4b] bg-gradient-to-r from-[#fea619] to-[#ffb947] hover:from-amber-400 hover:to-amber-400 shadow-xl shadow-[#fea619]/30 transition-all disabled:opacity-40 disabled:shadow-none cursor-pointer disabled:cursor-not-allowed border border-white/60"
+                  >
+                    {saving ? "Enregistrement..." : weekLocked ? "🔒 Semaine verrouillée" : "💾 Enregistrer toutes les présences de la semaine"}
+                  </button>
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
+        {/* VUE LISTE RAPIDE (par défaut) */}
+        {viewMode === "list" && !weekOverviewOpen && (
           <div className="glass-panel rounded-3xl border border-white/80 shadow-md overflow-hidden animate-fadeIn">
             {/* Barre de statut */}
             <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4 border-b border-slate-200/70 bg-white/50">
@@ -475,7 +907,7 @@ export default function AttendancePage() {
         )}
 
         {/* Barre d'enregistrement collée en bas : plus besoin de scroller pour valider */}
-        {viewMode === "list" && eligibleMembers.length > 0 && (
+        {viewMode === "list" && !weekOverviewOpen && eligibleMembers.length > 0 && (
           <div className="sticky bottom-4 z-20 flex justify-end">
             <button
               onClick={handleSaveAttendance}
