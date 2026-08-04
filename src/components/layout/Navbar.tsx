@@ -21,14 +21,16 @@ export default function Navbar({ role = "shepherd", groupName, userName }: Navba
     { name: "Présences", testId: "attendance", href: "/attendance", icon: "event_available", leaderOnly: false },
     { name: "Discipline", testId: "activities", href: "/activities", icon: "auto_awesome", leaderOnly: false },
     { name: "Alertes", testId: "alerts", href: "/alerts", icon: "notifications_active" },
-    { name: "Messages", testId: "messages", href: "/messages", icon: "chat", leaderOnly: false },
-    { name: "Conversations", testId: "conversations", href: "/conversations", icon: "smart_toy", leaderOnly: false },
+    { name: "Messages", testId: "messages", href: "/messages", icon: "chat", leaderOnly: false, superAdminOnly: true },
+    { name: "Conversations", testId: "conversations", href: "/conversations", icon: "smart_toy", leaderOnly: false, superAdminOnly: true },
+    { name: "WhatsApp", testId: "whatsapp", href: "/whatsapp", icon: "phone_in_talk", leaderOnly: false, superAdminOnly: true },
     { name: "Rapports", testId: "reports", href: "/reports", icon: "assessment" },
   ];
 
-  // Le leader ne voit que Dashboard, Fidèles, Alertes, Rapports
+  // Filtrage par rôle : leader voit moins, superAdminOnly réservé aux super_admin
   const navItems = allNavItems.filter((item) => {
     if (role === "leader" && item.leaderOnly === false) return false;
+    if (item.superAdminOnly && role !== "super_admin") return false;
     return true;
   });
 
