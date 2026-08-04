@@ -14,7 +14,9 @@ export function computeProgramsSummary(
   attendanceRecords: Attendance[],
   programs: ProgramDefinition[] = PROGRAM_DEFINITIONS
 ): ProgramSummaryItem[] {
-  const activeMembers = members.filter((m) => !m.archived_at && m.status !== "archived");
+  // Exclude archived AND newcomers (status='new') from member quotas
+  // Newcomers are tracked separately for integration, not counted in official ratios
+  const activeMembers = members.filter((m) => !m.archived_at && m.status !== "archived" && m.status !== "new");
 
   return programs.map((prog) => {
     let eligibleMembers = activeMembers;
@@ -23,9 +25,10 @@ export function computeProgramsSummary(
     }
 
     const eligibleCount = eligibleMembers.length;
+    const eligibleIds = new Set(eligibleMembers.map((m) => m.id));
     const presentIdsForProg = new Set(
       attendanceRecords
-        .filter((a) => a.program_type === prog.id && a.is_present)
+        .filter((a) => a.program_type === prog.id && a.is_present && eligibleIds.has(a.member_id))
         .map((a) => a.member_id)
     );
 

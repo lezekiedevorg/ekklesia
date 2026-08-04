@@ -39,7 +39,7 @@ export default function Modal({ open, onClose, children, maxWidth = 'max-w-lg' }
     >
       <div
         data-testid="modal-container"
-        className={`${maxWidth} w-full max-h-[88vh] flex flex-col bg-white rounded-3xl border border-slate-200/80 shadow-2xl relative`}
+        className={`${maxWidth} w-full max-h-[95vh] flex flex-col bg-white rounded-3xl border border-slate-200/80 shadow-2xl relative`}
         onClick={(e) => e.stopPropagation()}
       >
         <button

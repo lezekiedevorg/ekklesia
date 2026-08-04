@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import PageLoader from "@/components/common/PageLoader";
 import { hasGlobalScope, hasOwnScope } from "@/lib/auth/roles";
 import { createClient } from "@/lib/supabase/client";
@@ -52,6 +52,7 @@ export default function AttendancePage() {
   // Liste rapide par défaut, pas-à-pas en option
   const [viewMode, setViewMode] = useState<"list" | "wizard">("list");
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [memberFilter, setMemberFilter] = useState<"all" | "newcomers" | "members">("all");
 
   // Attendance state: member_id -> boolean
   const [attendanceState, setAttendanceState] = useState<Record<string, boolean>>({});
@@ -311,18 +312,33 @@ export default function AttendancePage() {
     }
   };
 
-  // All active members (no program filter — used in week view)
-  const activeMembers = members.filter((m) => !m.archived_at);
+  // All active members (no program filter — used in week view), newcomers first
+  const activeMembers = members
+    .filter((m) => !m.archived_at)
+    .filter((m) => memberFilter === "all" || (memberFilter === "newcomers" && m.status === "new") || (memberFilter === "members" && m.status !== "new"))
+    .sort((a, b) => {
+      if (a.status === "new" && b.status !== "new") return -1;
+      if (a.status !== "new" && b.status === "new") return 1;
+      return a.first_name.localeCompare(b.first_name);
+    });
 
-  // Filter out archived members and match program rules
-  const eligibleMembers = members.filter((m) => {
-    if (m.archived_at) return false;
-    const prog = programs.find((p) => p.id === selectedProgram);
-    if (prog?.eligibility_class) {
-      return m.current_class === prog.eligibility_class;
-    }
-    return true; // programmes ouverts à tous
-  });
+  // Filter out archived members and match program rules, newcomers first
+  const eligibleMembers = members
+    .filter((m) => {
+      if (m.archived_at) return false;
+      if (memberFilter === "newcomers" && m.status !== "new") return false;
+      if (memberFilter === "members" && m.status === "new") return false;
+      const prog = programs.find((p) => p.id === selectedProgram);
+      if (prog?.eligibility_class) {
+        return m.current_class === prog.eligibility_class;
+      }
+      return true;
+    })
+    .sort((a, b) => {
+      if (a.status === "new" && b.status !== "new") return -1;
+      if (a.status !== "new" && b.status === "new") return 1;
+      return a.first_name.localeCompare(b.first_name);
+    });
 
 
 
@@ -562,6 +578,12 @@ export default function AttendancePage() {
             >
               Vue semaine
             </button>
+            <div className="h-4 w-[1px] bg-slate-200 mx-1" />
+            <div className="flex items-center gap-1 bg-slate-100 rounded-xl p-1">
+              {([["all", "Tous"], ["newcomers", "Nouveaux"], ["members", "Membres"]] as const).map(([val, label]) => (
+                <button key={val} onClick={() => setMemberFilter(val)} className={`px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${memberFilter === val ? "bg-white text-[#1e1b4b] shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>{label}</button>
+              ))}
+            </div>
           </div>
         )}
 
@@ -598,8 +620,9 @@ export default function AttendancePage() {
             const prog = programs.find((p) => p.id === progId);
             const isToday = dateStr === todayStr;
 
-            // Compute eligible members for THIS day's program
+            // Compute eligible members for THIS day's program (exclude newcomers from official count)
             const eligibleForDay = activeMembers.filter((m) => {
+              if (m.status === "new") return false;
               if (!prog) return false;
               if (prog.eligibility_class) return m.current_class === prog.eligibility_class;
               return true;
@@ -671,8 +694,13 @@ export default function AttendancePage() {
                             <div className="w-6 h-6 shrink-0 rounded-md bg-gradient-to-tr from-[#1e1b4b] to-[#4338ca] text-white text-[9px] font-black flex items-center justify-center">
                               {member.first_name[0]}{member.last_name[0]}
                             </div>
-                            <span className="font-bold text-[#1e1b4b] truncate max-w-[100px]">
+                            <span className="font-bold text-[#1e1b4b] truncate max-w-[100px] flex items-center gap-1">
                               {member.first_name} {member.last_name}
+                              {member.status === "new" && (
+                                <span className="px-1.5 py-0.5 rounded-full text-[9px] font-black bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0">
+                                  Nouveau
+                                </span>
+                              )}
                             </span>
                           </div>
                         </td>
@@ -822,11 +850,28 @@ export default function AttendancePage() {
 
             {/* Grille : 2 à 3 colonnes pour éviter une liste interminable */}
             <div className="p-3 sm:p-4 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2 items-start">
-              {eligibleMembers.map((member) => {
+              {eligibleMembers.map((member, idx) => {
+                const isNewcomer = member.status === "new";
+                const prevIsNewcomer = idx > 0 && eligibleMembers[idx - 1].status === "new";
+                const showSectionBreak = !isNewcomer && idx > 0 && prevIsNewcomer;
                 const state = attendanceState[member.id];
                 return (
+                  <React.Fragment key={member.id}>
+                    {showSectionBreak && (
+                      <div className="col-span-full border-t border-slate-200 pt-2 mt-1">
+                        <span className="text-[10px] font-label-caps font-extrabold text-slate-500 uppercase tracking-wider">
+                          Membres Confirmés
+                        </span>
+                      </div>
+                    )}
+                    {idx === 0 && isNewcomer && (
+                      <div className="col-span-full pb-1">
+                        <span className="text-[10px] font-label-caps font-extrabold text-emerald-700 uppercase tracking-wider">
+                          Nouvelles Âmes ({eligibleMembers.filter(m => m.status === "new").length})
+                        </span>
+                      </div>
+                    )}
                   <div
-                    key={member.id}
                     className={`rounded-2xl border p-2.5 transition-colors ${
                       state === true
                         ? "bg-emerald-50/50 border-emerald-200"
@@ -846,7 +891,11 @@ export default function AttendancePage() {
                           <span className="truncate">
                             {member.first_name} {member.last_name}
                           </span>
-                          {member.status === "new" && <span title="Nouveau">✨</span>}
+                          {member.status === "new" && (
+                            <span className="px-1.5 py-0.5 rounded-full text-[9px] font-black bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0">
+                              {member.consecutive_sundays_present}/4
+                            </span>
+                          )}
                           {member.status === "absent_to_relaunch" && <span title="À relancer">⚠️</span>}
                         </div>
                         <div className="text-[10px] font-medium text-slate-400 truncate">
@@ -893,6 +942,7 @@ export default function AttendancePage() {
                       />
                     )}
                   </div>
+                  </React.Fragment>
                 );
               })}
 

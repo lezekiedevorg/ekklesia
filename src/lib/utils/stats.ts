@@ -112,8 +112,9 @@ export async function getGlobalStats(period?: Period): Promise<GlobalStats> {
       supabase.from("members").select("id", { count: "exact" }).is("archived_at", null).gte("created_at", p.start).lte("created_at", p.end),
     ]);
 
-  const totalMembers = membersRes.count || 0;
-  const activeMembers = (membersRes.data || []).filter((m) => m.status !== "archived").length;
+  // Exclude newcomers from official member counts
+  const totalMembers = (membersRes.data || []).filter((m) => m.status !== "new").length;
+  const activeMembers = (membersRes.data || []).filter((m) => m.status !== "archived" && m.status !== "new").length;
   const newMembersThisPeriod = newMembersRes.count || 0;
   const totalShepherds = shepherdsRes.count || 0;
   const totalGroups = groupsRes.count || 0;
@@ -184,11 +185,13 @@ export async function getGroupStats(groupId: string, period?: Period): Promise<G
     supabase.from("weekly_reports").select("id, status").in("shepherd_id", shepherdIds).gte("report_date", p.start).lte("report_date", p.end),
   ]);
 
-  const totalMembers = membersRes.count || 0;
+  // Exclude newcomers from official member count
+  const totalMembers = (membersRes.data || []).filter((m) => m.status !== "new").length;
   const attendanceByProgram: Record<string, number> = {};
   const programs = PROGRAM_DEFINITIONS.map((pr) => pr.id);
+  const nonNewcomerIds = new Set((membersRes.data || []).filter((m) => m.status !== "new").map((m) => m.id));
   for (const prog of programs) {
-    const progAttendance = (attendanceRes.data || []).filter((a) => a.program_type === prog);
+    const progAttendance = (attendanceRes.data || []).filter((a) => a.program_type === prog && nonNewcomerIds.has(a.member_id));
     const present = progAttendance.filter((a) => a.is_present).length;
     attendanceByProgram[prog] = progAttendance.length > 0 ? Math.round((present / progAttendance.length) * 100) : 0;
   }
@@ -226,19 +229,21 @@ export async function getShepherdStats(shepherdId: string, period?: Period): Pro
   const p = period || defaultPeriod;
 
   const [membersRes, attendanceRes, activitiesRes, reportsRes, visitsRes] = await Promise.all([
-    supabase.from("members").select("id").eq("shepherd_id", shepherdId).is("archived_at", null),
+    supabase.from("members").select("id, status").eq("shepherd_id", shepherdId).is("archived_at", null),
     supabase.from("attendance").select("member_id, program_type, is_present").gte("date", p.start).lte("date", p.end).in("member_id", (await supabase.from("members").select("id").eq("shepherd_id", shepherdId).is("archived_at", null)).data?.map((m) => m.id) || []),
     supabase.from("shepherd_activities").select("*").eq("shepherd_id", shepherdId).gte("week_start_date", p.start).lte("week_start_date", p.end),
     supabase.from("weekly_reports").select("id, status").eq("shepherd_id", shepherdId).gte("report_date", p.start).lte("report_date", p.end),
     supabase.from("member_visits").select("id").eq("shepherd_id", shepherdId).gte("visit_date", p.start).lte("visit_date", p.end),
   ]);
 
-  const memberCount = membersRes.count || 0;
+  // Exclude newcomers from official member count
+  const memberCount = (membersRes.data || []).filter((m) => m.status !== "new").length;
+  const nonNewcomerIds = new Set((membersRes.data || []).filter((m) => m.status !== "new").map((m) => m.id));
 
   const attendanceRatios: Record<string, number> = {};
   const programs = PROGRAM_DEFINITIONS.map((pr) => pr.id);
   for (const prog of programs) {
-    const progAttendance = (attendanceRes.data || []).filter((a) => a.program_type === prog);
+    const progAttendance = (attendanceRes.data || []).filter((a) => a.program_type === prog && nonNewcomerIds.has(a.member_id));
     const present = progAttendance.filter((a) => a.is_present).length;
     attendanceRatios[prog] = progAttendance.length > 0 ? Math.round((present / progAttendance.length) * 100) : 0;
   }
@@ -641,4 +646,159 @@ export async function compareEntities(
   }
 
   return results;
+}
+
+// ── Newcomer Stats ──────────────────────────────────────────────
+
+export interface NewcomerTrendPoint {
+  period: string;
+  count: number;
+}
+
+export interface NewcomerRetentionRate {
+  returned_2nd: number;
+  returned_3rd: number;
+  returned_4th: number;
+}
+
+export interface NewcomerConversionRate {
+  total_new: number;
+  graduated: number;
+  rate_pct: number;
+}
+
+export async function getNewcomersByPeriod(
+  shepherdId?: string | null,
+  startDate?: string,
+  endDate?: string,
+  granularity: "week" | "month" = "week",
+): Promise<NewcomerTrendPoint[]> {
+  const supabase = await createClient();
+  let query = supabase
+    .from("members")
+    .select("created_at")
+    .eq("status", "new");
+
+  if (shepherdId) query = query.eq("shepherd_id", shepherdId);
+  if (startDate) query = query.gte("created_at", startDate);
+  if (endDate) query = query.lte("created_at", endDate + "T23:59:59");
+
+  const { data } = await query;
+  if (!data) return [];
+
+  const buckets: Record<string, number> = {};
+  for (const m of data) {
+    const d = new Date(m.created_at);
+    let key: string;
+    if (granularity === "month") {
+      key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    } else {
+      const oneJan = new Date(d.getFullYear(), 0, 1);
+      const weekNum = Math.ceil(((d.getTime() - oneJan.getTime()) / 86400000 + oneJan.getDay() + 1) / 7);
+      key = `${d.getFullYear()}-W${String(weekNum).padStart(2, "0")}`;
+    }
+    buckets[key] = (buckets[key] || 0) + 1;
+  }
+
+  return Object.entries(buckets)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([period, count]) => ({ period, count }));
+}
+
+export async function getNewcomerRetentionRate(
+  shepherdId?: string | null,
+  period?: Period,
+): Promise<NewcomerRetentionRate> {
+  const supabase = await createClient();
+  let query = supabase
+    .from("members")
+    .select("id, consecutive_sundays_present")
+    .eq("status", "new");
+
+  if (shepherdId) query = query.eq("shepherd_id", shepherdId);
+  if (period) {
+    query = query.gte("created_at", period.start).lte("created_at", period.end + "T23:59:59");
+  }
+
+  const { data } = await query;
+  if (!data || data.length === 0) return { returned_2nd: 0, returned_3rd: 0, returned_4th: 0 };
+
+  const total = data.length;
+  const r2 = data.filter((m) => m.consecutive_sundays_present >= 2).length;
+  const r3 = data.filter((m) => m.consecutive_sundays_present >= 3).length;
+  const r4 = data.filter((m) => m.consecutive_sundays_present >= 4).length;
+
+  return {
+    returned_2nd: Math.round((r2 / total) * 100),
+    returned_3rd: Math.round((r3 / total) * 100),
+    returned_4th: Math.round((r4 / total) * 100),
+  };
+}
+
+export async function getAverageIntegrationTime(
+  shepherdId?: string | null,
+  period?: Period,
+): Promise<number> {
+  const supabase = await createClient();
+  let query = supabase
+    .from("members")
+    .select("created_at, last_seen_date, consecutive_sundays_present")
+    .eq("status", "member");
+
+  if (shepherdId) query = query.eq("shepherd_id", shepherdId);
+
+  const { data } = await query;
+  if (!data || data.length === 0) return 0;
+
+  const graduated = data.filter((m) => m.consecutive_sundays_present >= 4);
+  if (graduated.length === 0) return 0;
+
+  let totalDays = 0;
+  let count = 0;
+  for (const m of graduated) {
+    const created = new Date(m.created_at);
+    const lastSeen = new Date(m.last_seen_date || m.created_at);
+    const days = Math.ceil((lastSeen.getTime() - created.getTime()) / 86400000);
+    if (days > 0) {
+      totalDays += days;
+      count++;
+    }
+  }
+
+  return count > 0 ? Math.round(totalDays / count) : 0;
+}
+
+export async function getNewcomerConversionRate(
+  shepherdId?: string | null,
+  period?: Period,
+): Promise<NewcomerConversionRate> {
+  const supabase = await createClient();
+
+  // Total newcomers created in period
+  let newQuery = supabase
+    .from("members")
+    .select("id", { count: "exact", head: true })
+    .eq("status", "new");
+  if (shepherdId) newQuery = newQuery.eq("shepherd_id", shepherdId);
+  if (period) newQuery = newQuery.gte("created_at", period.start).lte("created_at", period.end + "T23:59:59");
+  const { count: totalNew } = await newQuery;
+
+  // Graduated (now members, were newcomers)
+  let gradQuery = supabase
+    .from("members")
+    .select("id", { count: "exact", head: true })
+    .eq("status", "member")
+    .gte("consecutive_sundays_present", 4);
+  if (shepherdId) gradQuery = gradQuery.eq("shepherd_id", shepherdId);
+  if (period) gradQuery = gradQuery.gte("created_at", period.start).lte("created_at", period.end + "T23:59:59");
+  const { count: graduated } = await gradQuery;
+
+  const total = totalNew || 0;
+  const grad = graduated || 0;
+
+  return {
+    total_new: total,
+    graduated: grad,
+    rate_pct: total > 0 ? Math.round((grad / total) * 100) : 0,
+  };
 }

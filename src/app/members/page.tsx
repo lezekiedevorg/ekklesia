@@ -39,8 +39,8 @@ export default function MembersPage() {
   const [shepherds, setShepherds] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Onglets Actifs vs Archives
-  const [activeTab, setActiveTab] = useState<"active" | "archived">("active");
+  // Onglets Actifs vs Nouveaux vs Archives
+  const [activeTab, setActiveTab] = useState<"active" | "newcomers" | "archived">("active");
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -72,6 +72,9 @@ export default function MembersPage() {
     status: "new",
     current_class: "none",
   });
+
+  // Données d'inscription des nouveaux (date, invité par)
+  const [newcomerRegistrations, setNewcomerRegistrations] = useState<Record<string, { registration_date: string; invited_by_member_id: string | null }>>({});
 
   // État de modification rapide de classe sur la carte
   const [editingClassId, setEditingClassId] = useState<string | null>(null);
@@ -135,6 +138,21 @@ export default function MembersPage() {
 
         const { data: mems } = await query;
         if (mems) setMembers(mems as Member[]);
+
+        // Récupérer les données d'inscription des nouveaux
+        const { data: registrations } = await supabase
+          .from("newcomer_registrations")
+          .select("member_id, registration_date, invited_by_member_id");
+        if (registrations) {
+          const regMap: Record<string, { registration_date: string; invited_by_member_id: string | null }> = {};
+          for (const r of registrations) {
+            regMap[r.member_id] = {
+              registration_date: r.registration_date,
+              invited_by_member_id: r.invited_by_member_id,
+            };
+          }
+          setNewcomerRegistrations(regMap);
+        }
       } catch (err) {
         console.error("Erreur de chargement des membres:", err);
       } finally {
@@ -183,11 +201,9 @@ export default function MembersPage() {
           shepherd_id: currentMember.shepherd_id || profile?.id || null,
           invited_by_member_id: currentMember.invited_by_member_id || null,
           current_class: currentMember.current_class,
-          status: currentMember.status,
-          consecutive_sundays_present:
-            currentMember.status === "member" ? 4 : 1,
-          consecutive_absences:
-            currentMember.status === "absent_to_relaunch" ? 2 : 0,
+          status: "new" as const,
+          consecutive_sundays_present: 1,
+          consecutive_absences: 0,
         };
 
         const { data, error } = await supabase
@@ -344,11 +360,12 @@ export default function MembersPage() {
     );
   };
 
-  const activeMembers = members.filter((m) => m.status !== "archived");
+  const activeMembers = members.filter((m) => m.status !== "archived" && m.status !== "new");
+  const newcomersList = members.filter((m) => m.status === "new");
   const archivedMembersList = members.filter((m) => m.status === "archived");
 
   const filteredMembers = (
-    activeTab === "active" ? activeMembers : archivedMembersList
+    activeTab === "active" ? activeMembers : activeTab === "newcomers" ? newcomersList : archivedMembersList
   ).filter((m) => {
     const matchesSearch =
       `${m.first_name} ${m.last_name}`
@@ -358,7 +375,7 @@ export default function MembersPage() {
     const matchesStatus = statusFilter === "all" || m.status === statusFilter;
     const matchesClass =
       classFilter === "all" || m.current_class === classFilter;
-    if (activeTab === "archived") return matchesSearch;
+    if (activeTab === "archived" || activeTab === "newcomers") return matchesSearch;
     return matchesSearch && matchesStatus && matchesClass;
   });
 
@@ -513,6 +530,21 @@ export default function MembersPage() {
             </span>
           </button>
           <button
+            onClick={() => setActiveTab("newcomers")}
+            className={`px-5 py-3 rounded-2xl font-label-caps font-extrabold text-xs transition-all flex items-center gap-2.5 cursor-pointer ${
+              activeTab === "newcomers"
+                ? "bg-gradient-to-r from-emerald-600 to-emerald-700 text-white shadow-md shadow-emerald-600/20 border border-emerald-400/40 scale-[1.02]"
+                : "bg-white text-slate-600 hover:bg-slate-100/80 border border-slate-200/80 hover:text-slate-900"
+            }`}
+          >
+            <span>Nouvelles Âmes</span>
+            <span
+              className={`px-2 py-0.5 rounded-full text-[10px] font-black ${activeTab === "newcomers" ? "bg-white text-emerald-800" : "bg-emerald-100 text-emerald-800"}`}
+            >
+              {newcomersList.length}
+            </span>
+          </button>
+          <button
             onClick={() => setActiveTab("archived")}
             className={`px-5 py-3 rounded-2xl font-label-caps font-extrabold text-xs transition-all flex items-center gap-2.5 cursor-pointer ${
               activeTab === "archived"
@@ -580,6 +612,15 @@ export default function MembersPage() {
                 </select>
               </div>
             </>
+          ) : activeTab === "newcomers" ? (
+            <div className="md:col-span-2 flex items-center px-4 py-3 text-xs font-bold text-emerald-900 bg-emerald-50/90 rounded-2xl border border-emerald-200/80 shadow-2xs">
+              <span className="material-symbols-outlined text-[18px] text-emerald-600 mr-2 shrink-0">
+                person_add
+              </span>
+              <span>
+                Les nouvelles âmes sont automatiquement promues membres après 4 présences dimanche consécutives. Relancez celles qui manquent un culte.
+              </span>
+            </div>
           ) : (
             <div className="md:col-span-2 flex items-center px-4 py-3 text-xs font-bold text-amber-900 bg-amber-50/90 rounded-2xl border border-amber-200/80 shadow-2xs">
               <span className="material-symbols-outlined text-[18px] text-amber-600 mr-2 shrink-0">
@@ -610,7 +651,106 @@ export default function MembersPage() {
               d&apos;affichage.
             </p>
           </div>
+        ) : activeTab === "newcomers" ? (
+          /* ─── NEWCOMER CARDS ─── */
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+            {paginatedMembers.map((member) => {
+              const reg = newcomerRegistrations[member.id];
+              const invitedBy = reg?.invited_by_member_id
+                ? allMembers.find((m) => m.id === reg.invited_by_member_id)
+                : null;
+              const shepherd = member.shepherd_id
+                ? shepherds.find((s) => s.id === member.shepherd_id)
+                : null;
+              const progress = Math.min(member.consecutive_sundays_present, 4);
+
+              return (
+                <div
+                  key={member.id}
+                  className="card-luxe p-5 transition-all flex flex-col justify-between border-emerald-200/80 bg-emerald-50/10"
+                >
+                  <div>
+                    <div className="flex items-start justify-between gap-3 mb-3">
+                      <div className="min-w-0 flex-1">
+                        <h3 className="text-sm sm:text-base font-headline-md font-extrabold text-slate-900 truncate" title={`${member.first_name} ${member.last_name}`}>
+                          {member.first_name} {member.last_name}
+                        </h3>
+                        {member.phone ? (
+                          <a href={`tel:${member.phone}`} className="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 mt-1 flex items-center gap-1 truncate">
+                            <span className="material-symbols-outlined text-[14px]">call</span> {member.phone}
+                          </a>
+                        ) : (
+                          <span className="text-[11px] font-medium text-slate-400 mt-1 block truncate">Aucun téléphone</span>
+                        )}
+                      </div>
+                      <span className="px-3 py-1 rounded-full text-[11px] font-label-caps font-black bg-emerald-50 text-emerald-700 border border-emerald-200/80 shadow-2xs flex items-center gap-1.5 shrink-0">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse" /> Nouveau
+                      </span>
+                    </div>
+
+                    <div className="space-y-2 my-3 py-3 border-y border-emerald-100/80 text-[11px] font-medium">
+                      {reg?.registration_date && (
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-slate-500 font-semibold truncate">1ère visite :</span>
+                          <span className="font-bold text-slate-800 whitespace-nowrap shrink-0">{new Date(reg.registration_date).toLocaleDateString("fr-FR")}</span>
+                        </div>
+                      )}
+                      {invitedBy && (
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-slate-500 font-semibold truncate">Invité(e) par :</span>
+                          <span className="font-bold text-slate-800 whitespace-nowrap shrink-0">{invitedBy.first_name} {invitedBy.last_name}</span>
+                        </div>
+                      )}
+                      {shepherd && (
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-slate-500 font-semibold truncate">Berger :</span>
+                          <span className="font-bold text-slate-800 whitespace-nowrap shrink-0">{shepherd.first_name} {shepherd.last_name}</span>
+                        </div>
+                      )}
+                      {member.last_seen_date && (
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-slate-500 font-semibold truncate">Dernière venue :</span>
+                          <span className="font-bold text-slate-800 whitespace-nowrap shrink-0">{new Date(member.last_seen_date).toLocaleDateString("fr-FR")}</span>
+                        </div>
+                      )}
+                      {member.consecutive_absences > 0 && (
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-rose-600 font-semibold truncate">Absences consécutives :</span>
+                          <span className="font-extrabold text-rose-700 bg-rose-50 px-2 py-0.5 rounded-lg border border-rose-200/80 shadow-2xs whitespace-nowrap shrink-0">{member.consecutive_absences}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Integration Progress Bar */}
+                    <div className="mt-2">
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="text-[10px] font-label-caps font-extrabold text-emerald-700 uppercase tracking-wider">Intégration</span>
+                        <span className="text-xs font-black text-emerald-800">{progress}/4 Dimanches</span>
+                      </div>
+                      <div className="flex gap-1.5">
+                        {[1, 2, 3, 4].map((i) => (
+                          <div key={i} className={`flex-1 h-2.5 rounded-full transition-all ${i <= progress ? "bg-gradient-to-r from-emerald-500 to-emerald-600 shadow-sm shadow-emerald-500/30" : "bg-slate-200/80"}`} />
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="pt-3 mt-3 border-t border-emerald-100/60 flex items-center gap-1.5">
+                    <button onClick={() => router.push(`/members/${member.id}`)} className="flex-1 py-2 px-2 rounded-xl text-[11px] font-bold bg-emerald-50/80 hover:bg-emerald-100 text-emerald-700 hover:text-emerald-900 border border-emerald-200 hover:border-emerald-300 transition-all flex items-center justify-center gap-1 cursor-pointer truncate shadow-2xs" title="Voir les statistiques">
+                      <span className="material-symbols-outlined text-[14px]">analytics</span>
+                      <span className="hidden sm:inline">Stats</span>
+                    </button>
+                    <button onClick={() => openEditModal(member)} className="flex-1 py-2 px-2 rounded-xl text-[11px] font-bold bg-slate-100/80 hover:bg-indigo-50 text-slate-700 hover:text-[#1e1b4b] border border-slate-200/80 hover:border-indigo-200 transition-all flex items-center justify-center gap-1 cursor-pointer truncate shadow-2xs" title="Modifier">
+                      <span className="material-symbols-outlined text-[14px]">edit</span>
+                      <span className="hidden sm:inline">Modifier</span>
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         ) : (
+          /* ─── REGULAR MEMBER CARDS ─── */
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
             {paginatedMembers.map((member) => (
               <div
@@ -972,7 +1112,7 @@ export default function MembersPage() {
               <p className="text-xs font-medium text-slate-500 mb-6">
                 {modalMode === "create"
                   ? "Définissez les coordonnées de base et indiquez le statut spirituel initial du fidèle dans le troupeau."
-                  : "Mettez à jour les coordonnées, le berger responsable ou ajustez le statut spirituel du fidèle."}
+                  : "Mettez à jour les coordonnées ou ajustez le statut spirituel du fidèle."}
               </p>
 
               <form onSubmit={handleSaveMember} className="space-y-5">
@@ -1024,8 +1164,7 @@ export default function MembersPage() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
+                  <div>
                       <label className="block text-xs font-label-caps font-extrabold uppercase tracking-wider text-slate-600 mb-1.5">
                         Téléphone / WhatsApp
                       </label>
@@ -1042,30 +1181,6 @@ export default function MembersPage() {
                         className="w-full px-4 py-3 rounded-2xl bg-slate-50/90 border border-slate-200/80 text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#1e1b4b]/20 focus:border-[#1e1b4b] focus:bg-white transition-all shadow-2xs"
                       />
                     </div>
-
-                    <div>
-                      <label className="block text-xs font-label-caps font-extrabold uppercase tracking-wider text-slate-600 mb-1.5">
-                        Berger Responsable
-                      </label>
-                      <select
-                        value={currentMember.shepherd_id}
-                        onChange={(e) =>
-                          setCurrentMember({
-                            ...currentMember,
-                            shepherd_id: e.target.value,
-                          })
-                        }
-                        className="w-full px-4 py-3 rounded-2xl bg-slate-50/90 border border-slate-200/80 text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#1e1b4b]/20 focus:border-[#1e1b4b] focus:bg-white transition-all shadow-2xs cursor-pointer"
-                      >
-                        <option value="">Sélectionner un berger...</option>
-                        {shepherds.map((s) => (
-                          <option key={s.id} value={s.id}>
-                            {s.first_name} {s.last_name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
@@ -1119,7 +1234,8 @@ export default function MembersPage() {
                   </div>
                 </div>
 
-                {/* Section Statut spirituel */}
+                {/* Section Statut spirituel — visible uniquement en édition */}
+                {modalMode === "edit" ? (
                 <div className="space-y-3 pt-2">
                   <h3 className="text-xs font-label-caps font-extrabold text-[#1e1b4b] uppercase tracking-wider border-b border-indigo-100/80 pb-2 flex items-center gap-1.5">
                     <span className="material-symbols-outlined text-[15px] text-[#fea619]">
@@ -1269,29 +1385,15 @@ export default function MembersPage() {
                     )}
                   </div>
                 </div>
-
-                {modalMode === "edit" &&
-                  currentMember.id &&
-                  currentMember.status !== "archived" && (
-                    <div className="pt-3 border-t border-slate-100/80 flex items-center justify-between">
-                      <span className="text-xs font-semibold text-slate-600">
-                        Cette âme ne suit plus l&apos;église ?
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          handleArchiveMember(currentMember.id!);
-                          setModalMode(null);
-                        }}
-                        className="px-3.5 py-2 rounded-xl text-xs font-bold text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-300 transition-colors cursor-pointer flex items-center gap-1.5 shadow-2xs"
-                      >
-                        <span className="material-symbols-outlined text-[15px]">
-                          archive
-                        </span>{" "}
-                        Archiver ce fidèle
-                      </button>
+                ) : (
+                  /* En mode création, afficher un message informatif */
+                  <div className="pt-2">
+                    <div className="flex items-center gap-2.5 px-4 py-3 rounded-2xl bg-emerald-50/90 border border-emerald-200/80 text-xs font-bold text-emerald-800">
+                      <span className="material-symbols-outlined text-[18px] text-emerald-600">info</span>
+                      <span>Ce fidèle sera enregistré comme Nouvelle Âme. Après 4 présences dimanche consécutives, il sera automatiquement promu Membre Intégré.</span>
                     </div>
-                  )}
+                  </div>
+                )}
 
                 <div className="pt-4 flex items-center justify-end gap-3 border-t border-slate-100/80">
                   <button

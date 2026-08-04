@@ -67,7 +67,7 @@ export default function DashboardPage() {
 
           if (members) {
             setStats({
-              totalMembers: members.length,
+              totalMembers: members.filter((m) => m.status !== "new").length,
               newMembers: members.filter((m) => m.status === "new").length,
               absentToRelaunch: members.filter((m) => m.status === "absent_to_relaunch").length,
               totalShepherds: 0,
@@ -96,9 +96,9 @@ export default function DashboardPage() {
             .eq("status", "submitted");
 
           setStats({
-            totalMembers: members?.length || 0,
-            newMembers: members?.filter((m) => m.status === "new").length || 0,
-            absentToRelaunch: members?.filter((m) => m.status === "absent_to_relaunch").length || 0,
+            totalMembers: (members || []).filter((m) => m.status !== "new").length,
+            newMembers: (members || []).filter((m) => m.status === "new").length,
+            absentToRelaunch: (members || []).filter((m) => m.status === "absent_to_relaunch").length,
             totalShepherds: shepherdIds.length,
             pendingReports: reports?.length || 0,
           });
@@ -121,9 +121,9 @@ export default function DashboardPage() {
             .eq("status", "submitted");
 
           setStats({
-            totalMembers: members?.length || 0,
-            newMembers: members?.filter((m) => m.status === "new").length || 0,
-            absentToRelaunch: members?.filter((m) => m.status === "absent_to_relaunch").length || 0,
+            totalMembers: (members || []).filter((m) => m.status !== "new").length,
+            newMembers: (members || []).filter((m) => m.status === "new").length,
+            absentToRelaunch: (members || []).filter((m) => m.status === "absent_to_relaunch").length,
             totalShepherds: shepherds?.length || 0,
             pendingReports: reports?.length || 0,
           });
@@ -219,22 +219,22 @@ export default function DashboardPage() {
             </div>
           </Link>
 
-          {/* KPI 2: Intégration (4 Semaines) */}
-          <Link href="/members" className="glass-panel-interactive rounded-3xl p-6 relative overflow-hidden group block">
+          {/* KPI 2: Nouvelles Âmes */}
+          <Link href="/members?tab=newcomers" className="glass-panel-interactive rounded-3xl p-6 relative overflow-hidden group block">
             <div className="flex justify-between items-start mb-4">
-              <span className="font-label-caps font-extrabold text-[11px] uppercase tracking-wider text-slate-500">
-                En Intégration (4 Sem.)
+              <span className="font-label-caps font-extrabold text-[11px] uppercase tracking-wider text-emerald-600">
+                Nouvelles Âmes
               </span>
-              <div className="w-11 h-11 rounded-2xl bg-purple-50 border border-purple-100 text-purple-700 flex items-center justify-center group-hover:scale-110 group-hover:bg-purple-600 group-hover:text-white transition-all shadow-2xs">
+              <div className="w-11 h-11 rounded-2xl bg-emerald-50 border border-emerald-100 text-emerald-700 flex items-center justify-center group-hover:scale-110 group-hover:bg-emerald-600 group-hover:text-white transition-all shadow-2xs">
                 <span className="material-symbols-outlined text-[22px]">person_add</span>
               </div>
             </div>
             <div className="flex items-baseline gap-2.5">
-              <span className="font-stat-mono font-extrabold text-3xl text-purple-950 tracking-tight">{stats.newMembers}</span>
-              <span className="text-xs font-black text-purple-700 bg-purple-50 border border-purple-200/80 px-2.5 py-0.5 rounded-full">Nouveaux</span>
+              <span className="font-stat-mono font-extrabold text-3xl text-emerald-800 tracking-tight">{stats.newMembers}</span>
+              <span className="text-xs font-black text-emerald-700 bg-emerald-50 border border-emerald-200/80 px-2.5 py-0.5 rounded-full">En intégration</span>
             </div>
             <div className="text-[11px] text-slate-500 font-semibold mt-3 flex items-center justify-between">
-              <span>Accueil & enracinement</span>
+              <span>Suivi de fidélisation</span>
               <span className="material-symbols-outlined text-[16px] text-slate-400 group-hover:translate-x-1 transition-transform">arrow_forward</span>
             </div>
           </Link>

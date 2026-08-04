@@ -277,7 +277,7 @@ export default function UsersManager({ initialUsers, roles, groups }: { initialU
       {/* Create/Edit Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
-          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-lg w-full p-6 md:p-8 space-y-6 max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-lg w-full p-6 md:p-8 space-y-6 max-h-[95vh]">
             <div className="flex items-center justify-between border-b border-slate-100 pb-4">
               <h3 className="text-lg font-black text-[#1e1b4b]">
                 {editingUser ? `Modifier le rôle : ${editingUser.first_name} ${editingUser.last_name}` : 'Créer un nouvel utilisateur'}

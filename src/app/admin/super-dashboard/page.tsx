@@ -86,6 +86,7 @@ export default function SuperDashboardPage() {
       const totalMembers = membersRes.count || 0;
       const totalShepherds = shepherdsRes.count || 0;
       const totalGroups = groupsRes.count || 0;
+      const newMembersThisPeriod = (membersRes.data || []).filter((m: any) => m.status === "new").length;
 
       const progList = await getProgramsClient();
       setProgramList(progList);
@@ -107,7 +108,7 @@ export default function SuperDashboardPage() {
       setStats({
         totalMembers,
         activeMembers: totalMembers,
-        newMembersThisPeriod: 0,
+        newMembersThisPeriod,
         totalShepherds,
         totalGroups,
         totalDepartments: (deptsRes.data || []).length,

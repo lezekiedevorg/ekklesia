@@ -19,6 +19,7 @@ export function EvolutionTab({
 }) {
   const [memberGrowth, setMemberGrowth] = useState<TrendPoint[]>([]);
   const [attendanceTrend, setAttendanceTrend] = useState<TrendPoint[]>([]);
+  const [newcomerGrowth, setNewcomerGrowth] = useState<TrendPoint[]>([]);
   const [loading, setLoading] = useState(true);
 
   const supabase = createClient();
@@ -33,6 +34,7 @@ export function EvolutionTab({
     const end_ = new Date(end);
     const points: TrendPoint[] = [];
     const attPoints: TrendPoint[] = [];
+    const newcomerPoints: TrendPoint[] = [];
 
     const current = new Date(startD);
     let guard = 0;
@@ -60,8 +62,16 @@ export function EvolutionTab({
       const attData = attRes.data || [];
       const attPct = attData.length > 0 ? Math.round((attData.filter((a) => a.is_present).length / attData.length) * 100) : 0;
 
+      const newcomerRes = await supabase
+        .from("members")
+        .select("id", { count: "exact" })
+        .eq("status", "new")
+        .gte("created_at", weekStart.toISOString().split("T")[0])
+        .lte("created_at", weekEnd.toISOString().split("T")[0] + "T23:59:59");
+
       points.push({ date: dateStr, value: memberRes.count || 0 });
       attPoints.push({ date: dateStr, value: attPct });
+      newcomerPoints.push({ date: dateStr, value: newcomerRes.count || 0 });
 
       if (granularity === "weekly") current.setDate(current.getDate() + 7);
       else current.setMonth(current.getMonth() + 1);
@@ -69,6 +79,7 @@ export function EvolutionTab({
 
     setMemberGrowth(points);
     setAttendanceTrend(attPoints);
+    setNewcomerGrowth(newcomerPoints);
     setLoading(false);
   }
 
@@ -123,6 +134,7 @@ export function EvolutionTab({
   return (
     <div className="space-y-6">
       {renderLineChart(memberGrowth, "#3E8EED", "Croissance des membres", "")}
+      {renderLineChart(newcomerGrowth, "#10B981", "Nouvelles Âmes par Période", "")}
       {renderLineChart(attendanceTrend, "#53B064", "Tendance de présence", "%")}
     </div>
   );

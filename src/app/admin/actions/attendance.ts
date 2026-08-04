@@ -12,7 +12,7 @@ export async function getAttendanceAction(start: string, end: string, program?: 
 
     let query = supabase
       .from('attendance')
-      .select('id, date, program_type, is_present, member_id, members(first_name, last_name)')
+      .select('id, date, program_type, is_present, member_id, members(first_name, last_name, status)')
       .gte('date', start)
       .lte('date', end)
       .order('date', { ascending: false })
@@ -34,7 +34,7 @@ export async function getAttendanceMembersAction() {
     const supabase = await createClient();
     const { data, error } = await supabase
       .from('members')
-      .select('id, first_name, last_name')
+      .select('id, first_name, last_name, status')
       .is('archived_at', null)
       .order('first_name');
     if (error) return { error: error.message };

@@ -476,9 +476,10 @@ export default function ReportsPage() {
     const mondayStr = getMondayDateStr(dateStr);
     const sundayStr = getSundayDateStr(dateStr);
 
-    // 1. Get members
+    // 1. Get members (exclude newcomers from official counts)
     const { data: mems } = await supabase.from("members").select("*").eq("shepherd_id", shepherdId).is("archived_at", null);
-    const totalMembers = mems?.length || 0;
+    const officialMembers = mems?.filter((m) => m.status !== "new") || [];
+    const totalMembers = officialMembers.length;
     const memIds = mems?.map((m) => m.id) || [];
 
     // 2. Get all attendance records across the week interval (Monday to Sunday)
@@ -489,32 +490,34 @@ export default function ReportsPage() {
       .gte("date", mondayStr)
       .lte("date", sundayStr) : { data: [] };
 
-    // Compute KPIs for every program of the week using our centralized helper
+    // Compute KPIs for every program of the week (official members only)
     const programList = await getProgramsClient();
-    const programsSummary: ProgramSummaryItem[] = computeProgramsSummary(mems || [], attData || [], programList);
+    const programsSummary: ProgramSummaryItem[] = computeProgramsSummary(officialMembers, attData || [], programList);
 
     const sundayProg = programsSummary.find((p) => p.program_type === "sunday_service");
     const presentCount = sundayProg?.present_count || 0;
     const ratio = sundayProg?.ratio_pct || 0;
 
-    // 3. Get Sunday absentees and reasons
+    // 3. Get Sunday absentees and reasons (official members only, not newcomers)
+    const officialMemberIds = new Set(officialMembers.map((m) => m.id));
     const sundayPresentIds = new Set(
       (attData || [])
-        .filter((a) => a.program_type === "sunday_service" && a.is_present)
+        .filter((a) => a.program_type === "sunday_service" && a.is_present && officialMemberIds.has(a.member_id))
         .map((a) => a.member_id)
     );
 
-    const { data: absReasons } = memIds.length > 0 ? await supabase
+    const officialMemIds = officialMembers.map((m) => m.id);
+    const { data: absReasons } = officialMemIds.length > 0 ? await supabase
       .from("sunday_absences")
       .select("*")
       .eq("program_type", "sunday_service")
-      .in("member_id", memIds)
+      .in("member_id", officialMemIds)
       .gte("date", mondayStr)
       .lte("date", sundayStr) : { data: [] };
 
     const absMap = new Map(absReasons?.map((r) => [r.member_id, r.reason]) || []);
     const absenteesList: { name: string; reason: string }[] = [];
-    mems?.forEach((m) => {
+    officialMembers.forEach((m) => {
       if (!sundayPresentIds.has(m.id)) {
         absenteesList.push({
           name: `${m.first_name} ${m.last_name}`,
@@ -523,8 +526,9 @@ export default function ReportsPage() {
       }
     });
 
+    // Newcomer progression (only status='new' members)
     const newMemsProg = mems
-      ?.filter((m) => m.consecutive_sundays_present && m.consecutive_sundays_present > 0 && m.consecutive_sundays_present < 4)
+      ?.filter((m) => m.status === "new" && m.consecutive_sundays_present && m.consecutive_sundays_present > 0 && m.consecutive_sundays_present < 4)
       .map((m) => ({ name: `${m.first_name} ${m.last_name}`, count: m.consecutive_sundays_present })) || [];
 
     // 5. Shepherd discipline for the exact week or latest
@@ -939,6 +943,16 @@ export default function ReportsPage() {
                 <h3 className="text-xs font-black uppercase tracking-wider text-indigo-200 flex items-center gap-1.5">
                   <span>🌱 Progression Nouveaux Membres ({previewData.new_members_progression.length})</span>
                 </h3>
+                {previewData.new_members_progression.length > 0 && (
+                  <div className="flex items-center gap-3 text-[11px] font-bold">
+                    <span className="px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                      {previewData.new_members_progression.filter(n => n.count >= 2).length} de retour au 2e dim.
+                    </span>
+                    <span className="px-2.5 py-1 rounded-lg bg-[#fea619]/20 text-[#fea619] border border-[#fea619]/30">
+                      {previewData.new_members_progression.filter(n => n.count >= 4).length} intégré(s)
+                    </span>
+                  </div>
+                )}
                 {previewData.new_members_progression.length === 0 ? (
                   <div className="p-4 rounded-xl bg-white/5 border border-white/10 text-center text-xs font-medium text-indigo-200">
                     Aucun nouveau membre en cours d'intégration (4 dimanches).

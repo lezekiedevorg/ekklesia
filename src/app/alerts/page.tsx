@@ -12,8 +12,9 @@ interface Member {
   first_name: string;
   last_name: string;
   phone: string;
-  status: "new" | "member" | "absent_to_relaunch";
+  status: "new" | "member" | "absent_to_relaunch" | "in_integration";
   consecutive_absences: number;
+  consecutive_sundays_present: number;
   last_seen_date: string;
 }
 
@@ -95,7 +96,7 @@ export default function AlertsPage() {
           .select("*")
           .is("archived_at", null)
           .neq("status", "archived")
-          .or("consecutive_absences.gte.2,status.eq.absent_to_relaunch")
+          .or("consecutive_absences.gte.2,status.eq.absent_to_relaunch,status.eq.new")
           .order("consecutive_absences", { ascending: false });
 
         let sIds: string[] = [];
@@ -240,7 +241,7 @@ export default function AlertsPage() {
                 </span>
               </h1>
               <p className="text-slate-600 text-xs sm:text-sm mt-2 font-medium max-w-2xl leading-relaxed">
-                Ces fidèles se sont absentés 2 dimanches consécutifs ou plus. Effectuez une visite, un appel de réconfort ou une relance, et enregistrez le motif pour lever l&apos;alerte automatiquement en base.
+                Les nouvelles âmes manquant 1 dimanche et les membres absents depuis 2 semaines ou plus nécessitent un suivi pastoral. Effectuez une visite, un appel ou une relance.
               </p>
             </div>
           </div>
@@ -256,102 +257,140 @@ export default function AlertsPage() {
           </div>
         )}
 
-        {/* Alert Cards Grid */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between border-b border-slate-200/80 pb-3.5">
-            <h2 className="text-lg font-black text-[#1e1b4b] flex items-center gap-2.5">
-              <span className="w-3.5 h-3.5 rounded-full bg-gradient-to-r from-rose-500 to-red-600 shadow-md shadow-rose-500/40 animate-pulse" />
-              <span>Alertes Actives à Traiter</span>
-            </h2>
-            <span className="text-xs font-black px-3.5 py-1 rounded-full bg-rose-50/90 text-rose-800 border border-rose-200/80 shadow-2xs">
-              {alertMembers.length} âme{alertMembers.length > 1 ? "s" : ""} en attente
-            </span>
-          </div>
+        {/* Alert Cards — split into newcomers and regular members */}
+        {(() => {
+          const newcomerAlerts = alertMembers.filter((m) => m.status === "new" && m.consecutive_absences >= 1);
+          const memberAlerts = alertMembers.filter((m) => m.status !== "new" || m.consecutive_absences >= 2);
 
-          {alertMembers.length === 0 ? (
-            <div className="glass-panel p-12 text-center max-w-2xl mx-auto space-y-4">
-              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-100 to-teal-50 border border-emerald-200 flex items-center justify-center mx-auto text-emerald-600 shadow-md shadow-emerald-500/10">
-                <span className="material-symbols-outlined text-3xl">task_alt</span>
+          if (alertMembers.length === 0) {
+            return (
+              <div className="glass-panel p-12 text-center max-w-2xl mx-auto space-y-4">
+                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-100 to-teal-50 border border-emerald-200 flex items-center justify-center mx-auto text-emerald-600 shadow-md shadow-emerald-500/10">
+                  <span className="material-symbols-outlined text-3xl">task_alt</span>
+                </div>
+                <div>
+                  <h3 className="text-lg font-black text-[#1e1b4b]">Gloire à Dieu ! Aucune alerte d&apos;absence</h3>
+                  <p className="text-xs sm:text-sm font-medium text-slate-500 mt-1 max-w-md mx-auto leading-relaxed">
+                    Tous vos fidèles sont réguliers aux cultes dominicaux ou ont déjà été pris en charge. Continuez ce merveilleux travail de veille spirituelle !
+                  </p>
+                </div>
               </div>
+            );
+          }
+
+          const renderCard = (member: Member, isNewcomer: boolean) => (
+            <div
+              key={member.id}
+              className={`glass-panel-interactive p-6 flex flex-col justify-between group relative overflow-hidden rounded-2xl ${isNewcomer ? "border-emerald-200/80 hover:border-emerald-400" : "border-rose-200/80 hover:border-rose-400"}`}
+            >
+              <div className={`absolute top-0 right-0 w-32 h-32 rounded-full blur-2xl -mr-12 -mt-12 pointer-events-none transition-transform group-hover:scale-125 duration-500 ${isNewcomer ? "bg-gradient-to-bl from-emerald-500/10 to-teal-500/5" : "bg-gradient-to-bl from-rose-500/10 to-amber-500/5"}`} />
               <div>
-                <h3 className="text-lg font-black text-[#1e1b4b]">Gloire à Dieu ! Aucune alerte d&apos;absence</h3>
-                <p className="text-xs sm:text-sm font-medium text-slate-500 mt-1 max-w-md mx-auto leading-relaxed">
-                  Tous vos fidèles sont réguliers aux cultes dominicaux ou ont déjà été pris en charge. Continuez ce merveilleux travail de veille spirituelle !
-                </p>
-              </div>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
-              {alertMembers.map((member) => (
-                <div
-                  key={member.id}
-                  className="glass-panel-interactive border-rose-200/80 hover:border-rose-400 p-6 flex flex-col justify-between group relative overflow-hidden rounded-2xl"
-                >
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-rose-500/10 to-amber-500/5 rounded-full blur-2xl -mr-12 -mt-12 pointer-events-none transition-transform group-hover:scale-125 duration-500" />
+                <div className="flex items-start justify-between gap-3 mb-4">
                   <div>
-                    <div className="flex items-start justify-between gap-3 mb-4">
-                      <div>
-                        <h3 className="text-base font-black text-[#1e1b4b] flex items-center gap-2 group-hover:text-rose-700 transition-colors">
-                          <span>{member.first_name} {member.last_name}</span>
-                        </h3>
-                        {member.phone ? (
-                          <a href={`tel:${member.phone}`} className="text-xs font-bold text-indigo-600 hover:text-indigo-800 mt-1 inline-flex items-center gap-1 transition-colors">
-                            <span className="material-symbols-outlined text-[14px]">call</span>
-                            <span>{member.phone}</span>
-                          </a>
-                        ) : (
-                          <span className="text-xs font-medium text-slate-400 mt-1 block italic">Aucun téléphone renseigné</span>
-                        )}
-                      </div>
-                      <span className="px-3 py-1 rounded-full text-xs font-black bg-rose-100/90 text-rose-800 border border-rose-300/80 shadow-2xs shrink-0">
-                        {member.consecutive_absences} dimanches abs.
-                      </span>
-                    </div>
-
-                    <div className="my-4 py-3.5 border-y border-slate-200/60 text-xs space-y-2.5 text-slate-600 font-medium">
-                      <div className="flex justify-between items-center">
-                        <span className="text-slate-400 font-semibold">Statut spirituel :</span>
-                        <span className="px-2.5 py-0.5 rounded-lg text-[10px] font-black uppercase bg-rose-50 text-rose-700 border border-rose-200/80">
-                          {member.status === "absent_to_relaunch" ? "À relancer" : member.status}
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-slate-400 font-semibold">Dernière présence :</span>
-                        <span className="text-[#1e1b4b] font-bold">
-                          {member.last_seen_date ? new Date(member.last_seen_date).toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "numeric" }) : "Inconnue"}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex gap-2 mt-2">
-                    <button
-                      onClick={() => handleOpenVisitModal(member)}
-                      className="flex-1 py-3.5 px-4 rounded-2xl font-black text-xs text-white bg-gradient-to-r from-rose-600 via-red-600 to-[#1e1b4b] hover:from-rose-700 hover:to-[#312e81] shadow-md shadow-rose-500/20 hover:shadow-lg hover:shadow-rose-500/30 transition-all transform group-hover:scale-[1.01] active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer border border-white/20"
-                    >
-                      <span className="material-symbols-outlined text-[16px]">handshake</span>
-                      <span>Visite / Relance</span>
-                    </button>
-                    {member.phone && (
-                      <button
-                        onClick={() => handleSendWhatsApp(member)}
-                        disabled={sendingWhatsApp === member.id}
-                        className="py-3.5 px-4 rounded-2xl font-black text-xs text-white bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 shadow-md shadow-emerald-500/20 hover:shadow-lg hover:shadow-emerald-500/30 transition-all transform active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer border border-white/20 disabled:opacity-50"
-                      >
-                        {sendingWhatsApp === member.id ? (
-                          <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                        ) : (
-                          <span className="material-symbols-outlined text-[16px]">chat</span>
-                        )}
-                        <span>WhatsApp</span>
-                      </button>
+                    <h3 className={`text-base font-black text-[#1e1b4b] flex items-center gap-2 transition-colors ${isNewcomer ? "group-hover:text-emerald-700" : "group-hover:text-rose-700"}`}>
+                      <span>{member.first_name} {member.last_name}</span>
+                      {isNewcomer && <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-50 text-emerald-700 border border-emerald-200">Nouveau</span>}
+                    </h3>
+                    {member.phone ? (
+                      <a href={`tel:${member.phone}`} className="text-xs font-bold text-indigo-600 hover:text-indigo-800 mt-1 inline-flex items-center gap-1 transition-colors">
+                        <span className="material-symbols-outlined text-[14px]">call</span>
+                        <span>{member.phone}</span>
+                      </a>
+                    ) : (
+                      <span className="text-xs font-medium text-slate-400 mt-1 block italic">Aucun téléphone renseigné</span>
                     )}
                   </div>
+                  <span className={`px-3 py-1 rounded-full text-xs font-black shadow-2xs shrink-0 ${isNewcomer ? "bg-amber-100/90 text-amber-800 border border-amber-300/80" : "bg-rose-100/90 text-rose-800 border border-rose-300/80"}`}>
+                    {member.consecutive_absences} dimanche{member.consecutive_absences > 1 ? "s" : ""} abs.
+                  </span>
                 </div>
-              ))}
+
+                <div className={`my-4 py-3.5 border-y text-xs space-y-2.5 text-slate-600 font-medium ${isNewcomer ? "border-emerald-200/60" : "border-slate-200/60"}`}>
+                  {isNewcomer && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-slate-400 font-semibold">Progression :</span>
+                      <span className="text-emerald-700 font-bold">{member.consecutive_sundays_present}/4 dimanches</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-400 font-semibold">Statut spirituel :</span>
+                    <span className={`px-2.5 py-0.5 rounded-lg text-[10px] font-black uppercase border ${isNewcomer ? "bg-emerald-50 text-emerald-700 border-emerald-200/80" : "bg-rose-50 text-rose-700 border-rose-200/80"}`}>
+                      {isNewcomer ? "Nouvelle Âme" : member.status === "absent_to_relaunch" ? "À relancer" : member.status}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-400 font-semibold">Dernière présence :</span>
+                    <span className="text-[#1e1b4b] font-bold">
+                      {member.last_seen_date ? new Date(member.last_seen_date).toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "numeric" }) : "Inconnue"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex gap-2 mt-2">
+                <button
+                  onClick={() => handleOpenVisitModal(member)}
+                  className={`flex-1 py-3.5 px-4 rounded-2xl font-black text-xs text-white shadow-md transition-all transform group-hover:scale-[1.01] active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer border border-white/20 ${isNewcomer ? "bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 shadow-emerald-500/20" : "bg-gradient-to-r from-rose-600 via-red-600 to-[#1e1b4b] hover:from-rose-700 hover:to-[#312e81] shadow-rose-500/20"}`}
+                >
+                  <span className="material-symbols-outlined text-[16px]">handshake</span>
+                  <span>Visite / Relance</span>
+                </button>
+                {member.phone && (
+                  <button
+                    onClick={() => handleSendWhatsApp(member)}
+                    disabled={sendingWhatsApp === member.id}
+                    className="py-3.5 px-4 rounded-2xl font-black text-xs text-white bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 shadow-md shadow-emerald-500/20 hover:shadow-lg hover:shadow-emerald-500/30 transition-all transform active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer border border-white/20 disabled:opacity-50"
+                  >
+                    {sendingWhatsApp === member.id ? (
+                      <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    ) : (
+                      <span className="material-symbols-outlined text-[16px]">chat</span>
+                    )}
+                    <span>WhatsApp</span>
+                  </button>
+                )}
+              </div>
             </div>
-          )}
-        </div>
+          );
+
+          return (
+            <div className="space-y-8">
+              {newcomerAlerts.length > 0 && (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between border-b border-emerald-200/80 pb-3.5">
+                    <h2 className="text-lg font-black text-[#1e1b4b] flex items-center gap-2.5">
+                      <span className="w-3.5 h-3.5 rounded-full bg-gradient-to-r from-emerald-500 to-teal-600 shadow-md shadow-emerald-500/40 animate-pulse" />
+                      <span>Nouveaux à relancer</span>
+                    </h2>
+                    <span className="text-xs font-black px-3.5 py-1 rounded-full bg-emerald-50/90 text-emerald-800 border border-emerald-200/80 shadow-2xs">
+                      {newcomerAlerts.length} nouvelle{newcomerAlerts.length > 1 ? "s" : ""} âme{newcomerAlerts.length > 1 ? "s" : ""}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
+                    {newcomerAlerts.map((m) => renderCard(m, true))}
+                  </div>
+                </div>
+              )}
+
+              {memberAlerts.length > 0 && (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between border-b border-rose-200/80 pb-3.5">
+                    <h2 className="text-lg font-black text-[#1e1b4b] flex items-center gap-2.5">
+                      <span className="w-3.5 h-3.5 rounded-full bg-gradient-to-r from-rose-500 to-red-600 shadow-md shadow-rose-500/40 animate-pulse" />
+                      <span>Membres à relancer</span>
+                    </h2>
+                    <span className="text-xs font-black px-3.5 py-1 rounded-full bg-rose-50/90 text-rose-800 border border-rose-200/80 shadow-2xs">
+                      {memberAlerts.length} membre{memberAlerts.length > 1 ? "s" : ""}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
+                    {memberAlerts.map((m) => renderCard(m, false))}
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })()}
 
         {/* Recent Pastoral Visits Log */}
         <div className="space-y-4 pt-6">

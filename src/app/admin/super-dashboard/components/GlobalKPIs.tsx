@@ -2,6 +2,7 @@ interface GlobalKPIsProps {
   stats: {
     totalMembers: number;
     activeMembers: number;
+    newMembersThisPeriod: number;
     totalShepherds: number;
     totalGroups: number;
     totalDepartments: number;
@@ -19,6 +20,7 @@ export function GlobalKPIs({ stats }: GlobalKPIsProps) {
 
   const kpis = [
     { label: "Membres", value: stats.totalMembers, icon: "group", color: "text-[#3E8EED]" },
+    { label: "Nouvelles Âmes", value: stats.newMembersThisPeriod, icon: "person_add", color: "text-[#10B981]" },
     { label: "Bergers", value: stats.totalShepherds, icon: "church", color: "text-[#E8912F]" },
     { label: "Groupes", value: stats.totalGroups, icon: "diversity_3", color: "text-[#A16EFF]" },
     { label: "Départements", value: stats.totalDepartments, icon: "apartment", color: "text-[#53B064]" },

@@ -19,7 +19,7 @@ export interface Group {
   description?: string;
 }
 
-export type MemberStatus = "new_convert" | "in_integration" | "active" | "member" | "archived";
+export type MemberStatus = "new" | "in_integration" | "member" | "absent_to_relaunch" | "archived";
 export type MemberClass = "none" | "tuesday_class" | "wednesday_class" | "completed";
 
 export interface Member {

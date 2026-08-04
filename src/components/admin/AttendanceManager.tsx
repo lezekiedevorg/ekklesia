@@ -19,9 +19,9 @@ interface Record_ {
   program_type: string;
   is_present: boolean;
   member_id: string;
-  members?: { first_name: string; last_name: string } | null;
+  members?: { first_name: string; last_name: string; status?: string } | null;
 }
-interface MemberLite { id: string; first_name: string; last_name: string }
+interface MemberLite { id: string; first_name: string; last_name: string; status?: string }
 
 function isoDaysAgo(n: number) {
   return new Date(Date.now() - n * 86400000).toISOString().split('T')[0];
@@ -46,13 +46,18 @@ export default function AttendanceManager() {
   const programLabel = (id: string) => programs.find((p) => p.id === id)?.label || id;
 
   const [search, setSearch] = useState('');
+  const [memberFilter, setMemberFilter] = useState<'all' | 'newcomers' | 'members'>('all');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(5);
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return records;
-    return records.filter((r) => `${r.members?.first_name || ''} ${r.members?.last_name || ''}`.toLowerCase().includes(q));
-  }, [records, search]);
+    return records.filter((r) => {
+      const matchesSearch = !q || `${r.members?.first_name || ''} ${r.members?.last_name || ''}`.toLowerCase().includes(q);
+      const isNewcomer = r.members?.status === 'new';
+      const matchesFilter = memberFilter === 'all' || (memberFilter === 'newcomers' && isNewcomer) || (memberFilter === 'members' && !isNewcomer);
+      return matchesSearch && matchesFilter;
+    });
+  }, [records, search, memberFilter]);
   useEffect(() => { setPage(1); }, [search, start, end, program]);
   const paged = filtered.slice((page - 1) * pageSize, page * pageSize);
 
@@ -121,6 +126,11 @@ export default function AttendanceManager() {
             {programs.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}
           </select>
           <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Rechercher un fidèle…" className={`${inputCls} min-w-[170px]`} />
+          <div className="flex items-center gap-1 bg-slate-100 rounded-xl p-1">
+            {([['all', 'Tous'], ['newcomers', 'Nouveaux'], ['members', 'Membres']] as const).map(([val, label]) => (
+              <button key={val} onClick={() => setMemberFilter(val)} className={`px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${memberFilter === val ? 'bg-white text-[#1e1b4b] shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>{label}</button>
+            ))}
+          </div>
         </div>
         <button onClick={() => setShowAdd(true)} className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#1e1b4b] to-indigo-900 text-white font-black text-xs uppercase tracking-wider shadow-sm hover:scale-105 transition-all shrink-0">
           <span className="material-symbols-outlined text-[18px] text-[#fea619]">add_task</span>
@@ -145,7 +155,14 @@ export default function AttendanceManager() {
             {!loading && filtered.length === 0 && <tr><td colSpan={5} className="py-10 text-center text-sm text-slate-400 font-medium">Aucun pointage sur cette période.</td></tr>}
             {!loading && paged.map((r) => (
               <tr key={r.id} className="hover:bg-slate-50/50 transition-colors">
-                <td className="py-3 px-5 font-bold text-slate-800">{r.members ? `${r.members.first_name} ${r.members.last_name}` : '—'}</td>
+                <td className="py-3 px-5 font-bold text-slate-800">
+                  {r.members ? (
+                    <span className="flex items-center gap-2">
+                      {r.members.first_name} {r.members.last_name}
+                      {r.members.status === 'new' && <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-50 text-emerald-700 border border-emerald-200">Nouveau</span>}
+                    </span>
+                  ) : '—'}
+                </td>
                 <td className="py-3 px-4 text-slate-600">{r.date}</td>
                 <td className="py-3 px-4 text-slate-600">{programLabel(r.program_type)}</td>
                 <td className="py-3 px-4 text-center">
@@ -173,7 +190,7 @@ export default function AttendanceManager() {
             <label className="block text-xs font-extrabold uppercase tracking-wider text-slate-600 mb-1.5">Fidèle</label>
             <select required value={form.member_id} onChange={(e) => setForm({ ...form, member_id: e.target.value })} className={`w-full ${inputCls}`}>
               <option value="">— Sélectionner —</option>
-              {members.map((m) => <option key={m.id} value={m.id}>{m.first_name} {m.last_name}</option>)}
+              {members.map((m) => <option key={m.id} value={m.id}>{m.first_name} {m.last_name}{m.status === 'new' ? ' (Nouveau)' : ''}</option>)}
             </select>
           </div>
           <div className="grid grid-cols-2 gap-4">

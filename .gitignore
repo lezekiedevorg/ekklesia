@@ -48,3 +48,11 @@ next-env.d.ts
 /.mimocode/
 /e2e/test-results/
 
+# WhatsApp session (contient les credentials WhatsApp)
+.wwebjs_auth/
+.wwebjs_cache/
+
+# Claude Code & Supabase temp
+/.claude/
+/supabase/.temp/
+
