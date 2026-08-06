@@ -1,17 +1,45 @@
-import { Client, LocalAuth, Message } from "whatsapp-web.js";
 import qrcode from "qrcode";
 
-let client: Client | null = null;
+const isWhatsAppEnabled = process.env.WHATSAPP_ENABLED === "true";
+
+let client: any = null;
 let isReady = false;
 let qrCodeData: string | null = null;
 
 /**
  * Initialise ou retourne le client WhatsApp singleton.
- * Le client utilise LocalAuth pour persister la session.
+ * En mode stub (WHATSAPP_ENABLED=false), retourne un objet mock.
  */
-export function getWhatsAppClient(): Client {
+export function getWhatsAppClient(): any {
   if (client) return client;
 
+  // Mode stub : retourner un objet mock sans whatsapp-web.js
+  if (!isWhatsAppEnabled) {
+    client = {
+      isReady: () => true,
+      on: () => {},
+      destroy: async () => {
+        console.log("[WHATSAPP STUB] destroy() appelé");
+      },
+      send: async ({ chatId, text }: { chatId: string; text: string }) => {
+        console.log(`[WHATSAPP STUB] Would send to ${chatId}: ${text}`);
+        return { id: `mock_${Date.now()}`, ack: 1 };
+      },
+      sendMessage: async (to: string, text: string) => {
+        console.log(`[WHATSAPP STUB] Would send "${text}" to ${to}`);
+        return { id: `mock_${Date.now()}` };
+      },
+      isRegisteredUser: async () => true,
+      initialize: async () => {
+        console.log("[WHATSAPP STUB] initialize() appelé");
+      },
+    };
+    isReady = true;
+    return client;
+  }
+
+  // Mode réel : charger whatsapp-web.js dynamiquement
+  const { Client, LocalAuth } = require("whatsapp-web.js");
   client = new Client({
     authStrategy: new LocalAuth({ dataPath: ".wwebjs_auth" }),
     puppeteer: {
@@ -28,7 +56,7 @@ export function getWhatsAppClient(): Client {
     },
   });
 
-  client.on("qr", (qr) => {
+  client.on("qr", (qr: string) => {
     console.log("[WhatsApp] QR Code reçu, scannez-le avec votre téléphone");
     qrcode.toDataURL(qr).then((url) => {
       qrCodeData = url;
@@ -41,13 +69,13 @@ export function getWhatsAppClient(): Client {
     qrCodeData = null;
   });
 
-  client.on("disconnected", (reason) => {
+  client.on("disconnected", (reason: string) => {
     console.log("[WhatsApp] Client déconnecté:", reason);
     isReady = false;
     client = null;
   });
 
-  client.on("auth_failure", (msg) => {
+  client.on("auth_failure", (msg: string) => {
     console.error("[WhatsApp] Échec d'authentification:", msg);
     isReady = false;
     client = null;
@@ -94,7 +122,16 @@ export async function sendWhatsAppMessage(
     // WhatsApp attend le format: numéro@c.us
     const chatId = `${cleanPhone}@c.us`;
 
-    // Vérifier que le numéro existe sur WhatsApp
+    // Mode stub : retourner succès directement
+    if (!isWhatsAppEnabled) {
+      console.log(`[WHATSAPP STUB] Would send to ${chatId}: ${message}`);
+      return {
+        success: true,
+        messageId: `mock_${Date.now()}`,
+      };
+    }
+
+    // Mode réel : vérifier que le numéro existe sur WhatsApp
     const isRegistered = await waClient.isRegisteredUser(chatId);
     if (!isRegistered) {
       return {
@@ -104,7 +141,7 @@ export async function sendWhatsAppMessage(
     }
 
     // Envoyer le message
-    const sentMessage: Message = await waClient.sendMessage(chatId, message);
+    const sentMessage = await waClient.sendMessage(chatId, message);
 
     return {
       success: true,
@@ -117,4 +154,11 @@ export async function sendWhatsAppMessage(
       error: error.message || "Erreur inconnue lors de l'envoi",
     };
   }
+}
+
+/**
+ * Retourne le mode actuel (stub ou réel).
+ */
+export function isWhatsAppStubMode(): boolean {
+  return !isWhatsAppEnabled;
 }

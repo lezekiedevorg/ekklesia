@@ -1,9 +1,11 @@
 /**
  * Client API MiniMax pour l'agent IA pastoral.
  * API compatible OpenAI - utilise le format chat completions.
+ * En mode mock (MINIMAX_ENABLED=false), retourne des réponses déterministes.
  */
 
 const MINIMAX_API_URL = "https://api.minimax.chat/v1/text/chatcompletion_v2";
+const isMiniMaxEnabled = process.env.MINIMAX_ENABLED === "true";
 
 interface MiniMaxMessage {
   role: "system" | "user" | "assistant";
@@ -189,6 +191,15 @@ export async function generateOpeningMessage(
   context: ConversationContext,
   churchName: string = "Eglise de Sagesse et Puissance"
 ): Promise<{ message: string; usage: { input: number; output: number } }> {
+  // Mode mock : retourner une réponse déterministe
+  if (!isMiniMaxEnabled) {
+    console.log("[MINIMAX STUB] generateOpeningMessage appelé pour", context.prenom, context.nom);
+    return {
+      message: `[MOCK AI] Bonjour ${context.prenom}, comment allez-vous aujourd'hui ? Pensez-vous à nous joindre prochainement pour un moment de partage ?`,
+      usage: { input: 0, output: 0 },
+    };
+  }
+
   const systemPrompt = buildPastoralSystemPrompt(context, churchName);
 
   const messages: MiniMaxMessage[] = [
@@ -218,6 +229,21 @@ export async function generateReply(
   attentionReason?: string;
   usage: { input: number; output: number };
 }> {
+  // Mode mock : retourner une réponse déterministe avec détection d'alerte
+  if (!isMiniMaxEnabled) {
+    console.log("[MINIMAX STUB] generateReply appelé pour", context.prenom, context.nom);
+    const needsAttention = userMessage.toLowerCase().includes("urgence") ||
+                          userMessage.toLowerCase().includes("malade") ||
+                          userMessage.toLowerCase().includes("hospitalisation");
+    return {
+      message: `[MOCK AI] Merci pour votre réponse, ${context.prenom}. Nous serons ravis de vous revoir prochainement ! Comment puissons-nous prier pour vous ?`,
+      needsAttention,
+      attentionType: needsAttention ? "urgent" : undefined,
+      attentionReason: needsAttention ? "Mots-clés d'urgence détectés dans le message" : undefined,
+      usage: { input: 0, output: 0 },
+    };
+  }
+
   const systemPrompt = buildPastoralSystemPrompt(context, churchName);
 
   const messages: MiniMaxMessage[] = [
@@ -268,6 +294,18 @@ export async function generateConversationSummary(
   needsAttention: boolean;
   attentionReason?: string;
 }> {
+  // Mode mock : retourner un résumé déterministe
+  if (!isMiniMaxEnabled) {
+    console.log("[MINIMAX STUB] generateConversationSummary appelé pour", memberName);
+    return {
+      summary: `[MOCK] Conversation simulée avec ${memberName}. L'utilisateur a exprimé des besoins de prière pour sa famille et sa santé.`,
+      spiritualHealthScore: 7,
+      status: "neutral",
+      prayerTopics: ["Famille", "Santé"],
+      needsAttention: false,
+    };
+  }
+
   const messages: MiniMaxMessage[] = [
     {
       role: "system",

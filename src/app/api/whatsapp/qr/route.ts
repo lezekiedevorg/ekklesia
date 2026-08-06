@@ -1,12 +1,23 @@
 import { NextResponse } from "next/server";
-import { getWhatsAppClient, isWhatsAppReady, getQRCode } from "@/lib/whatsapp/client";
+import { getWhatsAppClient, isWhatsAppReady, getQRCode, isWhatsAppStubMode } from "@/lib/whatsapp/client";
 
 /**
  * GET /api/whatsapp/qr
  * Retourne le QR code WhatsApp pour connexion, ou le statut si déjà connecté.
+ * En mode stub, retourne un statut simulé.
  */
 export async function GET() {
   try {
+    // Vérifier si on est en mode stub
+    if (isWhatsAppStubMode()) {
+      return NextResponse.json({
+        status: "stub",
+        connected: false,
+        stub: true,
+        message: "WhatsApp est désactivé dans cet environnement (mode stub)",
+      });
+    }
+
     // Initialiser le client si pas encore fait
     getWhatsAppClient();
 

@@ -1,36 +1,150 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Church Management System
 
-## Getting Started
+Application de gestion d'église construite avec Next.js 16 et Supabase.
 
-First, run the development server:
+## Development Setup
+
+### Prérequis
+
+- **Node.js** v18+ (recommandé : v20+)
+- **Docker Desktop** installé et en cours d'exécution (requis par Supabase CLI)
+
+### Installation
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+# Installer les dépendances
+npm install
+
+# Initialiser Supabase CLI (si ce n'est pas déjà fait)
+npx supabase init
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Démarrer l'environnement de développement
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+# 1. Démarrer Supabase local (Postgres, Auth, Studio)
+npm run db:start
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+# 2. (Optionnel) Réinitialiser la base avec les migrations et données démo
+npm run db:reset
+
+# 3. (Optionnel) Créer les utilisateurs de test
+npm run db:seed
+
+# 4. Démarrer l'application Next.js
+npm run dev
+```
+
+L'application est accessible sur http://localhost:3000
+
+### Utilisateurs de test
+
+Après `npm run db:seed`, vous pouvez vous connecter avec :
+
+| Email | Mot de passe | Rôle |
+|-------|--------------|------|
+| berger@ekklesia.test | Eglise2026! | Berger |
+| leader@ekklesia.test | Eglise2026! | Leader |
+| pastor@ekklesia.test | Eglise2026! | Pasteur |
+| admin@ekklesia.test | Eglise2026! | Admin |
+| newcomer@ekklesia.test | Eglise2026! | Nouveau membre |
+
+### Variables d'environnement
+
+Le fichier `.env.development` contient les variables pour le développement local. Il n'est pas versionné (gitignored).
+
+Les variables importantes :
+- `WHATSAPP_ENABLED=false` : Désactive les appels WhatsApp réels (mode stub)
+- `MINIMAX_ENABLED=false` : Désactive les appels MiniMax AI réels (mode mock)
+
+### Commandes utiles
+
+```bash
+npm run db:start      # Démarrer Supabase local
+npm run db:stop       # Arrêter Supabase local
+npm run db:reset      # Réinitialiser la base de données
+npm run db:seed       # Créer les utilisateurs de test
+npm run dev           # Démarrer Next.js
+npm run dev:all       # Démarrer Supabase + Next.js
+npm run build         # Build de production
+npm run test:e2e      # Tests E2E
+```
+
+## Production Deployment
+
+### Prérequis
+
+- Compte **Vercel** configuré
+- Projet **Supabase Cloud** (ref: lzfnmjojlymmnkhlpcda)
+- **Docker Desktop** n'est pas nécessaire en production
+
+### Configuration Vercel
+
+1. Connecter le repository GitHub à Vercel
+2. Configurer les variables d'environnement dans le dashboard Vercel :
+
+| Variable | Description |
+|----------|-------------|
+| `NEXT_PUBLIC_SUPABASE_URL` | URL du projet Supabase Cloud |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Clé publique (anon) Supabase |
+| `SUPABASE_SERVICE_ROLE_KEY` | Clé service_role Supabase |
+| `MINIMAX_API_KEY` | Clé API MiniMax AI |
+| `MINIMAX_GROUP_ID` | ID du groupe MiniMax |
+| `MINIMAX_MODEL` | Modèle MiniMax (défaut: abab6.5s-chat) |
+| `CRON_SECRET` | Secret pour sécuriser les cron jobs |
+| `WHATSAPP_ENABLED` | `true` en production |
+| `MINIMAX_ENABLED` | `true` en production |
+
+### Cron Jobs
+
+Les cron jobs sont configurés dans `vercel.json` :
+- `/api/cron/daily-conversations` : Tous les jours à 7h00 UTC
+- `/api/cron/weekly-report` : Chaque lundi à 8h00 UTC
+
+### Déploiement
+
+Le déploiement est automatique lors du push sur la branche `main`.
+
+```bash
+git push origin main
+```
+
+Vercel détecte le push, build et déploie automatiquement.
+
+## Architecture
+
+```
+src/
+├── app/                    # Pages et routes (Next.js App Router)
+│   ├── api/               # Routes API
+│   │   ├── cron/          # Cron jobs (daily-conversations, weekly-report)
+│   │   └── whatsapp/      # Endpoints WhatsApp (qr, send, webhook)
+│   └── ...                # Pages UI
+├── lib/
+│   ├── supabase/          # Clients Supabase (browser, server, admin)
+│   ├── whatsapp/          # Client WhatsApp (réel ou stub)
+│   └── ai/                # Client MiniMax AI (réel ou mock)
+└── types/
+    └── db.ts              # Types TypeScript pour la base de données
+
+supabase/
+├── migrations/            # Migrations SQL (19 fichiers)
+└── config.toml           # Configuration Supabase CLI
+```
+
+## Feature Flags
+
+| Flag | Valeur dev | Valeur prod | Description |
+|------|-----------|-------------|-------------|
+| `WHATSAPP_ENABLED` | `false` | `true` | Active/désactive WhatsApp |
+| `MINIMAX_ENABLED` | `false` | `true` | Active/désactive MiniMax AI |
+
+En mode stub/mock :
+- WhatsApp retourne des réponses simulées (logs dans la console)
+- MiniMax retourne des réponses déterministes (pas d'appel API)
 
 ## Learn More
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- [Next.js Documentation](https://nextjs.org/docs)
+- [Supabase Documentation](https://supabase.com/docs)
+- [Vercel Documentation](https://vercel.com/docs)

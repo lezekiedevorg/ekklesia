@@ -1,12 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
-import { sendWhatsAppMessage } from "@/lib/whatsapp/client";
-import { generateReply, generateConversationSummary } from "@/lib/ai/minimax-client";
+import { isWhatsAppStubMode } from "@/lib/whatsapp/client";
 
 /**
  * POST /api/whatsapp/webhook
  * Traite les messages WhatsApp entrants (réponses des membres).
- * Ce webhook est appelé par whatsapp-web.js via le polling de messages.
+ * En mode stub, retourne 200 OK sans traitement.
  *
  * Body:
  * - phone: string (numéro de l'expéditeur)
@@ -15,6 +13,21 @@ import { generateReply, generateConversationSummary } from "@/lib/ai/minimax-cli
  */
 export async function POST(request: NextRequest) {
   try {
+    // Mode stub : retourner 200 OK sans traitement
+    if (isWhatsAppStubMode()) {
+      console.log("[WHATSAPP STUB] Webhook reçu, traitement ignoré en mode stub");
+      return NextResponse.json({
+        success: true,
+        action: "stub",
+        message: "Webhook reçu mais WhatsApp est en mode stub",
+      });
+    }
+
+    // Mode réel : charger les dépendances dynamiquement
+    const { createClient } = await import("@/lib/supabase/server");
+    const { sendWhatsAppMessage } = await import("@/lib/whatsapp/client");
+    const { generateReply, generateConversationSummary } = await import("@/lib/ai/minimax-client");
+
     const supabase = await createClient();
     const body = await request.json();
     const { phone, message, whatsappMessageId } = body;
