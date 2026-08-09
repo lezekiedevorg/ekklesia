@@ -122,10 +122,10 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-[#f8fafc] to-[#f1f5f9] text-[#1e1b4b] pb-24 font-sans selection:bg-[#fea619]/20">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-[#f8fafc] to-[#f1f5f9] text-[#1e1b4b] pb-32 font-sans selection:bg-[#fea619]/20">
 
       <main className="max-w-2xl mx-auto p-4 sm:p-6 mt-4 animate-fade-in-up">
-        <div className="glass-panel rounded-3xl p-6 sm:p-8 shadow-md border border-white/80 relative overflow-hidden">
+        <div className="glass-panel rounded-3xl p-6 sm:p-8 shadow-md border border-white/80 relative">
           {/* Ambient Decorative Glow */}
           <div className="absolute -top-12 -right-12 w-64 h-64 bg-gradient-to-bl from-indigo-500/10 via-amber-500/10 to-transparent rounded-full blur-3xl pointer-events-none" />
 

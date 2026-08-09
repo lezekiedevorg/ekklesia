@@ -253,7 +253,7 @@ export default function ShepherdActivitiesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-[#f8fafc] to-[#f1f5f9] text-[#1e1b4b] pb-24 font-sans selection:bg-[#fea619]/20">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-[#f8fafc] to-[#f1f5f9] text-[#1e1b4b] pb-32 font-sans selection:bg-[#fea619]/20">
 
       <main className="max-w-6xl mx-auto p-4 sm:p-6 lg:p-8 space-y-6 animate-fade-in-up">
         {/* Header Section */}
@@ -299,7 +299,7 @@ export default function ShepherdActivitiesPage() {
           <ObservationsSection form={form as any} setForm={setForm} absentees={absentees} />
 
           {/* Sticky/Prominent Submit Button */}
-          <div className="glass-panel p-5 sm:p-6 rounded-3xl shadow-xl border border-white/80 flex flex-col sm:flex-row items-center justify-between gap-4 sticky bottom-6 z-30">
+          <div className="glass-panel p-5 sm:p-6 rounded-3xl shadow-xl border border-white/80 flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="text-xs text-slate-600 font-medium">
               🔒 Assurez-vous d&apos;avoir vérifié les choix exclusifs entre <strong className="text-[#1e1b4b]">Q (Quotidien)</strong> et <strong className="text-[#fea619]">I (Intermittent)</strong> avant d&apos;enregistrer.
             </div>

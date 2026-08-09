@@ -498,7 +498,7 @@ export default function AttendancePage() {
   const pendingCount = eligibleMembers.length - presentCount - markedAbsentCount;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-[#f8fafc] to-[#f1f5f9] text-[#1e1b4b] pb-24 font-sans selection:bg-[#fea619]/20">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-[#f8fafc] to-[#f1f5f9] text-[#1e1b4b] pb-32 font-sans selection:bg-[#fea619]/20">
 
       <main className="max-w-6xl mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
         {/* Header Section */}

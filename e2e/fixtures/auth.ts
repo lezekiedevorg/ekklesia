@@ -76,13 +76,23 @@ export async function safeLoginAs(page: Page, role: UserRole): Promise<UserRole>
   await page.fill('[data-testid="login-password"]', account.password);
   await page.click('[data-testid="login-submit"]');
 
-  // Attendre soit la redirection, soit un message d'erreur
+  // Attendre soit la redirection, soit un message d'erreur (testid OU texte visible)
   const loginError = page.locator('[data-testid="login-error"]');
-  const hasError = await loginError.isVisible({ timeout: 5000 }).catch(() => false);
+  const loginErrorText = page.locator('text=/Invalid login credentials|Invalides|Identifiants/i');
+  const hasErrorByTestid = await loginError.isVisible({ timeout: 4000 }).catch(() => false);
+  const hasErrorByText = !hasErrorByTestid
+    ? await loginErrorText.isVisible({ timeout: 4000 }).catch(() => false)
+    : false;
+  const hasError = hasErrorByTestid || hasErrorByText;
 
   if (hasError && role !== 'super_admin') {
     console.log(`  ⚠️ Compte ${role} (${account.email}) non trouvé — fallback vers super_admin`);
-    // Retry avec super_admin
+  } else if (hasError && role === 'super_admin') {
+    console.log(`  ❌ Identifiants super_admin invalides (${account.email}) — vérifiez .env.local pointe sur le bon Supabase et que le user existe.`);
+  }
+
+  // Fallback super_admin si autre rôle a échoué
+  if (hasError && role !== 'super_admin') {
     await page.goto('/login', { timeout: 30_000 });
     await page.waitForSelector('[data-testid="login-email"]', { timeout: 15_000 });
     await page.fill('[data-testid="login-email"]', TEST_ACCOUNTS.super_admin.email);
@@ -90,6 +100,10 @@ export async function safeLoginAs(page: Page, role: UserRole): Promise<UserRole>
     await page.click('[data-testid="login-submit"]');
     await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 20_000 });
     return 'super_admin';
+  }
+
+  if (hasError) {
+    throw new Error(`Login failed for ${role} (${account.email}) — see login page toast.`);
   }
 
   await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 20_000 });

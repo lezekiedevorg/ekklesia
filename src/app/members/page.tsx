@@ -513,10 +513,10 @@ export default function MembersPage() {
         </div>
 
         {/* Navigation Tabs */}
-        <div className="flex items-center gap-3 border-b border-slate-200/80 pb-3">
+        <div className="flex items-center gap-2 sm:gap-3 border-b border-slate-200/80 pb-3 flex-wrap">
           <button
             onClick={() => setActiveTab("active")}
-            className={`px-5 py-3 rounded-2xl font-label-caps font-extrabold text-xs transition-all flex items-center gap-2.5 cursor-pointer ${
+            className={`px-4 sm:px-5 py-3 rounded-2xl font-label-caps font-extrabold text-xs transition-all flex items-center gap-2 cursor-pointer min-h-[44px] ${
               activeTab === "active"
                 ? "bg-gradient-to-r from-[#1e1b4b] to-[#312e81] text-white shadow-md shadow-indigo-950/20 border border-[#fea619]/30 scale-[1.02]"
                 : "bg-white text-slate-600 hover:bg-slate-100/80 border border-slate-200/80 hover:text-slate-900"
@@ -531,7 +531,7 @@ export default function MembersPage() {
           </button>
           <button
             onClick={() => setActiveTab("newcomers")}
-            className={`px-5 py-3 rounded-2xl font-label-caps font-extrabold text-xs transition-all flex items-center gap-2.5 cursor-pointer ${
+            className={`px-4 sm:px-5 py-3 rounded-2xl font-label-caps font-extrabold text-xs transition-all flex items-center gap-2 cursor-pointer min-h-[44px] ${
               activeTab === "newcomers"
                 ? "bg-gradient-to-r from-emerald-600 to-emerald-700 text-white shadow-md shadow-emerald-600/20 border border-emerald-400/40 scale-[1.02]"
                 : "bg-white text-slate-600 hover:bg-slate-100/80 border border-slate-200/80 hover:text-slate-900"
@@ -546,13 +546,13 @@ export default function MembersPage() {
           </button>
           <button
             onClick={() => setActiveTab("archived")}
-            className={`px-5 py-3 rounded-2xl font-label-caps font-extrabold text-xs transition-all flex items-center gap-2.5 cursor-pointer ${
+            className={`px-4 sm:px-5 py-3 rounded-2xl font-label-caps font-extrabold text-xs transition-all flex items-center gap-2 cursor-pointer min-h-[44px] ${
               activeTab === "archived"
                 ? "bg-gradient-to-r from-amber-600 to-amber-700 text-white shadow-md shadow-amber-600/20 border border-amber-400/40 scale-[1.02]"
                 : "bg-white text-slate-600 hover:bg-slate-100/80 border border-slate-200/80 hover:text-slate-900"
             }`}
           >
-            <span>Archives & Purgatoire</span>
+            <span>Archives &amp; Purgatoire</span>
             <span
               className={`px-2 py-0.5 rounded-full text-[10px] font-black ${activeTab === "archived" ? "bg-white text-amber-800" : "bg-amber-100 text-amber-800"}`}
             >
@@ -650,6 +650,15 @@ export default function MembersPage() {
               Essayez d&apos;élargir votre recherche ou de modifier vos filtres
               d&apos;affichage.
             </p>
+            {activeTab === "active" && newcomersList.length > 0 && (
+              <button
+                onClick={() => setActiveTab("newcomers")}
+                className="mt-5 px-5 py-2.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-emerald-700 text-white font-extrabold text-xs shadow-md flex items-center gap-2 mx-auto cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[16px]">person_add</span>
+                Voir {newcomersList.length} nouvelle{newcomersList.length > 1 ? "s" : ""} âme{newcomersList.length > 1 ? "s" : ""} en intégration
+              </button>
+            )}
           </div>
         ) : activeTab === "newcomers" ? (
           /* ─── NEWCOMER CARDS ─── */
