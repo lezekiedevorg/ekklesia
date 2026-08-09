@@ -159,12 +159,30 @@ body {
   display: none;
 }
 @media print {
+  /* Réduire toute la page à zéro pour que la pagination ne soit dictée
+     QUE par le bloc .print-only (sinon le dashboard impose sa hauteur). */
+  html, body {
+    height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+  }
   body * {
     visibility: hidden !important;
+    height: 0 !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+    padding: 0 !important;
+    margin: 0 !important;
   }
   .print-only,
   .print-only * {
     visibility: visible !important;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    padding: revert !important;
+    margin: revert !important;
   }
   .print-only {
     display: block !important;
@@ -177,6 +195,25 @@ body {
   .print-only * {
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
+  }
+  /* Forcer le rapport sur une seule page : pas de coupure interne,
+     pas de saut après le titre, pas de saut avant le pied. */
+  #shepherd-report,
+  #shepherd-report table,
+  #shepherd-report tr,
+  #shepherd-report thead,
+  #shepherd-report tbody {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+  #shepherd-report h1 {
+    page-break-after: avoid !important;
+    break-after: avoid !important;
+  }
+  #shepherd-report > div,
+  #shepherd-report > p {
+    page-break-before: avoid !important;
+    break-before: avoid !important;
   }
   @page {
     size: A4 landscape;
