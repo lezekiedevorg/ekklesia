@@ -1,11 +1,25 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import PageLoader from "@/components/common/PageLoader";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import Modal from "@/components/common/Modal";
 import { hasOwnScope } from "@/lib/auth/roles";
+import {
+  getActiveListId,
+  getAllLists,
+  getList,
+  subscribeToChanges,
+  type NamedList,
+} from "@/lib/storage/namedLists";
+import { MembersListManager } from "@/components/members/MembersListManager";
+import {
+  MembersListPrint,
+  type PrintMember,
+} from "@/components/members/MembersListPrint";
+import { MemberCardCheckbox } from "@/components/members/MemberCardCheckbox";
+import { ActiveListBanner } from "@/components/members/ActiveListBanner";
 
 interface Member {
   id: string;
@@ -78,6 +92,26 @@ export default function MembersPage() {
 
   // État de modification rapide de classe sur la carte
   const [editingClassId, setEditingClassId] = useState<string | null>(null);
+
+  // Listes nommées (localStorage) + impression PDF
+  const [namedLists, setNamedLists] = useState<NamedList[]>([]);
+  const [activeListId, setActiveListIdState] = useState<string | null>(null);
+  const [showListsManager, setShowListsManager] = useState(false);
+  const [printTrigger, setPrintTrigger] = useState<{
+    title: string;
+    subtitle?: string;
+    members: PrintMember[];
+  } | null>(null);
+
+  const refreshLists = useCallback(() => {
+    setNamedLists(getAllLists());
+    setActiveListIdState(getActiveListId());
+  }, []);
+
+  useEffect(() => {
+    refreshLists();
+    return subscribeToChanges(refreshLists);
+  }, [refreshLists]);
 
   const supabase = createClient();
   const router = useRouter();
@@ -364,6 +398,44 @@ export default function MembersPage() {
   const newcomersList = members.filter((m) => m.status === "new");
   const archivedMembersList = members.filter((m) => m.status === "archived");
 
+  // Membres actifs = statut officiel "member" (toute la Bergerie, indépendamment
+  // de ce que "Membres Actifs" de l'onglet affiche — qui exclut new + archived).
+  const officialActiveMembers = members.filter((m) => m.status === "member");
+
+  // Handlers PDF
+  const toPrintMembers = (list: Member[]): PrintMember[] =>
+    list.map((m) => ({
+      fullName: `${m.first_name} ${m.last_name}`.trim(),
+      phone: m.phone || "",
+    }));
+
+  const handleExportActiveMembers = () => {
+    if (officialActiveMembers.length === 0) {
+      alert("Aucun membre actif (statut « Membre Intégré ») à exporter.");
+      return;
+    }
+    setPrintTrigger({
+      title: "Liste des membres actifs",
+      subtitle: `${officialActiveMembers.length} membres`,
+      members: toPrintMembers(officialActiveMembers),
+    });
+  };
+
+  const handleExportNamedList = (listId: string) => {
+    const list = getList(listId);
+    if (!list) return;
+    if (list.memberIds.length === 0) {
+      alert("Cette liste est vide. Coche au moins un membre avant d'exporter.");
+      return;
+    }
+    const subset = members.filter((m) => list.memberIds.includes(m.id));
+    setPrintTrigger({
+      title: list.name,
+      subtitle: `${subset.length} membre${subset.length > 1 ? "s" : ""}`,
+      members: toPrintMembers(subset),
+    });
+  };
+
   const filteredMembers = (
     activeTab === "active" ? activeMembers : activeTab === "newcomers" ? newcomersList : archivedMembersList
   ).filter((m) => {
@@ -501,15 +573,42 @@ export default function MembersPage() {
             </p>
           </div>
 
-          <button
-            onClick={openCreateModal}
-            className="px-6 py-4 rounded-2xl font-headline-md font-extrabold text-xs text-white bg-gradient-to-r from-[#1e1b4b] via-[#312e81] to-[#4338ca] hover:from-[#312e81] hover:to-[#4338ca] shadow-lg shadow-indigo-950/25 transition-all transform hover:scale-[1.02] active:scale-[0.98] shrink-0 flex items-center justify-center gap-2.5 cursor-pointer border border-[#fea619]/40 relative z-10"
-          >
-            <span className="material-symbols-outlined text-[20px] text-[#fea619]">
-              person_add
-            </span>
-            Inscrire une nouvelle âme
-          </button>
+          <div className="relative z-10 flex items-center gap-2 flex-wrap shrink-0">
+            <button
+              onClick={handleExportActiveMembers}
+              title={`Exporter les ${officialActiveMembers.length} membres actifs en PDF`}
+              className="px-4 sm:px-5 py-3.5 rounded-2xl font-headline-md font-extrabold text-xs text-[#1e1b4b] bg-white hover:bg-indigo-50 border-2 border-[#1e1b4b]/20 hover:border-[#1e1b4b] shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-[18px]">picture_as_pdf</span>
+              <span className="hidden sm:inline">Membres actifs (PDF)</span>
+              <span className="sm:hidden">PDF</span>
+            </button>
+            <button
+              onClick={() => setShowListsManager((v) => !v)}
+              className={`px-4 sm:px-5 py-3.5 rounded-2xl font-headline-md font-extrabold text-xs transition-all flex items-center justify-center gap-2 cursor-pointer border-2 ${
+                showListsManager
+                  ? "bg-[#fea619] text-[#1e1b4b] border-[#fea619] shadow-md"
+                  : "bg-white text-[#1e1b4b] hover:bg-[#fea619]/10 border-[#1e1b4b]/20 hover:border-[#fea619]"
+              }`}
+            >
+              <span className="material-symbols-outlined text-[18px]">lists</span>
+              <span className="hidden sm:inline">Mes listes</span>
+              {namedLists.length > 0 && (
+                <span className="ml-1 px-2 py-0.5 rounded-full bg-[#1e1b4b]/10 text-[10px] font-black">
+                  {namedLists.length}
+                </span>
+              )}
+            </button>
+            <button
+              onClick={openCreateModal}
+              className="px-6 py-4 rounded-2xl font-headline-md font-extrabold text-xs text-white bg-gradient-to-r from-[#1e1b4b] via-[#312e81] to-[#4338ca] hover:from-[#312e81] hover:to-[#4338ca] shadow-lg shadow-indigo-950/25 transition-all transform hover:scale-[1.02] active:scale-[0.98] shrink-0 flex items-center justify-center gap-2.5 cursor-pointer border border-[#fea619]/40"
+            >
+              <span className="material-symbols-outlined text-[20px] text-[#fea619]">
+                person_add
+              </span>
+              Inscrire une nouvelle âme
+            </button>
+          </div>
         </div>
 
         {/* Navigation Tabs */}
@@ -560,6 +659,21 @@ export default function MembersPage() {
             </span>
           </button>
         </div>
+
+        {/* Bandeau liste active + Panneau Mes listes */}
+        {activeListId && (() => {
+          const list = namedLists.find((l) => l.id === activeListId);
+          return list ? <ActiveListBanner list={list} onChange={refreshLists} /> : null;
+        })()}
+
+        {showListsManager && (
+          <MembersListManager
+            lists={namedLists}
+            activeListId={activeListId}
+            onExport={handleExportNamedList}
+            onListsChanged={refreshLists}
+          />
+        )}
 
         {/* Filters Bar */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 glass-panel p-5 rounded-3xl shadow-sm">
@@ -680,6 +794,12 @@ export default function MembersPage() {
                 >
                   <div>
                     <div className="flex items-start justify-between gap-3 mb-3">
+                      {activeListId && (
+                        <MemberCardCheckbox
+                          memberId={member.id}
+                          onChange={refreshLists}
+                        />
+                      )}
                       <div className="min-w-0 flex-1">
                         <h3 className="text-sm sm:text-base font-headline-md font-extrabold text-slate-900 truncate" title={`${member.first_name} ${member.last_name}`}>
                           {member.first_name} {member.last_name}
@@ -772,6 +892,12 @@ export default function MembersPage() {
               >
                 <div>
                   <div className="flex items-start justify-between gap-3 mb-3.5">
+                    {activeListId && (
+                      <MemberCardCheckbox
+                        memberId={member.id}
+                        onChange={refreshLists}
+                      />
+                    )}
                     <div className="min-w-0 flex-1">
                       <h3
                         className="text-sm sm:text-base font-headline-md font-extrabold text-slate-900 truncate"
@@ -1429,6 +1555,17 @@ export default function MembersPage() {
           )}
         </Modal>
       </main>
+
+      {/* Composant d'impression PDF (invisible à l'écran, visible uniquement à l'impression) */}
+      {printTrigger && (
+        <MembersListPrint
+          trigger
+          title={printTrigger.title}
+          subtitle={printTrigger.subtitle}
+          members={printTrigger.members}
+          onAfterPrint={() => setPrintTrigger(null)}
+        />
+      )}
     </div>
   );
 }
