@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 
 export interface PrintMember {
   fullName: string;
@@ -8,46 +8,67 @@ export interface PrintMember {
 }
 
 export interface ListPrintProps {
-  /** Titre affiché en haut du PDF */
+  /** Données à imprimer. `null` = composant rend `null` (mode repos). */
+  data: PrintPayload | null;
+}
+
+export interface PrintPayload {
   title: string;
-  /** Sous-titre optionnel (ex: "X membres") */
   subtitle?: string;
-  /** Liste des membres à imprimer */
   members: PrintMember[];
-  /** Quand ce compteur passe à true, window.print() est appelé */
-  trigger: boolean;
-  /** Callback après déclenchement de print (pour reset le trigger côté parent) */
-  onAfterPrint?: () => void;
 }
 
 /**
  * Composant d'impression générique pour listes de membres (PDF via navigateur).
  *
- * ⚠️ Suit le pattern imposé par `src/app/globals.css` :
- *   - Le CSS global `@media print` masque TOUT le body (`visibility: hidden`)
- *     SAUF les éléments dans `.print-only`
- *   - Donc notre root DOIT avoir la classe `print-only`
- *   - Les styles d'impression sont gérés globalement par `.print-only *`
- *     + on peut surcharger via `#members-list-print` pour nos couleurs
+ * ⚠️ Suit le pattern de `ShepherdReportPrint` (rapport berger qui fonctionne) :
  *
- * Pattern identique à `ShepherdReportPrint` (rapport berger).
+ * 1. **Toujours rendu** dans le JSX parent (jamais démonté), avec `data` qui
+ *    peut être `null`. Quand `data` est `null` → return null en interne.
+ *    NE PAS utiliser un rendu conditionnel `{data && <Comp />}` côté parent,
+ *    sinon le composant se démonte au mauvais moment et Safari ne capture
+ *    rien dans son snapshot d'impression.
+ *
+ * 2. **Pas de `setData(null)` après print**. Une fois imprimé, le composant
+ *    reste affiché (caché visuellement via `.print-only { display: none }`
+ *    en mode screen) jusqu'à ce que l'utilisateur déclenche une nouvelle
+ *    impression avec d'autres données. Le state reste dans le parent.
+ *
+ * 3. La classe `print-only` au root est **obligatoire** : `globals.css` force
+ *    `visibility: hidden` sur tout le body en @media print, sauf sur
+ *    `.print-only` (cf. `src/app/globals.css:161`).
+ *
+ * 4. Styles d'impression globaux fournis par `.print-only` :
+ *    - `visibility: visible`
+ *    - `-webkit-print-color-adjust: exact` (couleurs de fond conservées)
+ *    - Marges @page A4 portrait via `globals.css` (override local possible)
+ *
+ * Utilisation côté parent (cf. `src/app/reports/page.tsx` pour le modèle) :
+ * ```tsx
+ * const [printData, setPrintData] = useState<PrintPayload | null>(null);
+ * // Toujours rendu, jamais démonté :
+ * return ( <main>...</main> <MembersListPrint data={printData} /> );
+ * ```
  */
-export function MembersListPrint({
-  title,
-  subtitle,
-  members,
-  trigger,
-  onAfterPrint,
-}: ListPrintProps) {
+export function MembersListPrint({ data }: ListPrintProps) {
+  // Ref pour ne déclencher window.print() qu'une fois par nouveau data
+  const printedRef = useRef<string | null>(null);
+
   useEffect(() => {
-    if (!trigger) return;
+    if (!data) return;
+    // Clé stable : on évite de re-imprimer si React re-render sans changement réel
+    const key = `${data.title}|${data.subtitle ?? ""}|${data.members.length}`;
+    if (printedRef.current === key) return;
+    printedRef.current = key;
     const t = setTimeout(() => {
       window.print();
-      onAfterPrint?.();
     }, 200);
     return () => clearTimeout(t);
-  }, [trigger, onAfterPrint]);
+  }, [data]);
 
+  if (!data) return null;
+
+  const { title, subtitle, members } = data;
   const dateStr = new Date().toLocaleDateString("fr-FR", {
     day: "numeric",
     month: "long",
@@ -56,7 +77,7 @@ export function MembersListPrint({
 
   return (
     <div
-      id="members-list-print"
+      id="members-list-report"
       className="print-only bg-white text-slate-900 p-8"
       style={{ fontFamily: "Arial, sans-serif" }}
     >
@@ -77,75 +98,66 @@ export function MembersListPrint({
             page-break-inside: avoid !important;
             break-inside: avoid !important;
           }
-          #members-list-report > div {
+          #members-list-report > p {
             page-break-before: avoid !important;
             break-before: avoid !important;
           }
-        }
-        @media screen {
-          #members-list-report {
-            /* Caché visuellement à l'écran (le print-only global n'est déjà
-               pas affiché en screen, mais on garantit aussi qu'il n'est
-               pas cliquable). */
-            pointer-events: none;
-          }
+          @page { size: A4 portrait; margin: 15mm; }
         }
       `}</style>
 
-      <div id="members-list-report">
-        <h1 className="text-center text-[22px] font-black uppercase tracking-wide mb-2 text-[#1e1b4b]">
-          {title}
-        </h1>
-        <p className="text-center text-[12px] text-slate-600 mb-6 font-semibold">
-          {subtitle ? `${subtitle} — ` : ""}Généré le {dateStr}
-        </p>
+      <h1 className="text-center text-[22px] font-black uppercase tracking-wide mb-2 text-[#1e1b4b]">
+        {title}
+      </h1>
+      <p className="text-center text-[12px] text-slate-600 mb-6 font-semibold">
+        {subtitle ? `${subtitle} — ` : ""}Généré le {dateStr}
+      </p>
 
-        <table className="w-full border-collapse">
-          <thead>
+      <table className="w-full border-collapse">
+        <thead>
+          <tr>
+            <th className="border-2 border-slate-900 bg-[#1e1b4b] text-white px-3 py-2 text-[12px] font-bold uppercase tracking-wide w-[8%] text-center">
+              #
+            </th>
+            <th className="border-2 border-slate-900 bg-[#1e1b4b] text-white px-3 py-2 text-[12px] font-bold uppercase tracking-wide">
+              Nom &amp; Prénom
+            </th>
+            <th className="border-2 border-slate-900 bg-[#1e1b4b] text-white px-3 py-2 text-[12px] font-bold uppercase tracking-wide w-[28%]">
+              Téléphone
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {members.length === 0 ? (
             <tr>
-              <th className="border-2 border-slate-900 bg-[#1e1b4b] text-white px-3 py-2 text-[12px] font-bold uppercase tracking-wide w-[8%] text-center">
-                #
-              </th>
-              <th className="border-2 border-slate-900 bg-[#1e1b4b] text-white px-3 py-2 text-[12px] font-bold uppercase tracking-wide">
-                Nom &amp; Prénom
-              </th>
-              <th className="border-2 border-slate-900 bg-[#1e1b4b] text-white px-3 py-2 text-[12px] font-bold uppercase tracking-wide w-[28%]">
-                Téléphone
-              </th>
+              <td
+                colSpan={3}
+                className="border-2 border-slate-900 px-3 py-8 text-center text-slate-500 italic"
+              >
+                Aucun membre dans cette liste
+              </td>
             </tr>
-          </thead>
-          <tbody>
-            {members.length === 0 ? (
-              <tr>
-                <td
-                  colSpan={3}
-                  className="border-2 border-slate-900 px-3 py-8 text-center text-slate-500 italic"
-                >
-                  Aucun membre dans cette liste
+          ) : (
+            members.map((m, i) => (
+              <tr key={i}>
+                <td className="border-2 border-slate-900 px-3 py-2.5 text-center font-bold text-slate-700">
+                  {i + 1}
+                </td>
+                <td className="border-2 border-slate-900 px-3 py-2.5 font-bold text-slate-900">
+                  {m.fullName || "—"}
+                </td>
+                <td className="border-2 border-slate-900 px-3 py-2.5 font-bold text-slate-900">
+                  {m.phone || "—"}
                 </td>
               </tr>
-            ) : (
-              members.map((m, i) => (
-                <tr key={i}>
-                  <td className="border-2 border-slate-900 px-3 py-2.5 text-center font-bold text-slate-700">
-                    {i + 1}
-                  </td>
-                  <td className="border-2 border-slate-900 px-3 py-2.5 font-bold text-slate-900">
-                    {m.fullName || "—"}
-                  </td>
-                  <td className="border-2 border-slate-900 px-3 py-2.5 font-bold text-slate-900">
-                    {m.phone || "—"}
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+            ))
+          )}
+        </tbody>
+      </table>
 
-        <p className="text-center text-[10px] text-slate-500 mt-6">
-          Ekklesia — {members.length} membre{members.length > 1 ? "s" : ""}
-        </p>
-      </div>
+      <p className="text-center text-[10px] text-slate-500 mt-6">
+        Ekklesia — {members.length} membre{members.length > 1 ? "s" : ""}
+      </p>
     </div>
   );
 }

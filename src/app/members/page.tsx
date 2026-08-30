@@ -97,7 +97,7 @@ export default function MembersPage() {
   const [namedLists, setNamedLists] = useState<NamedList[]>([]);
   const [activeListId, setActiveListIdState] = useState<string | null>(null);
   const [showListsManager, setShowListsManager] = useState(false);
-  const [printTrigger, setPrintTrigger] = useState<{
+  const [printData, setPrintData] = useState<{
     title: string;
     subtitle?: string;
     members: PrintMember[];
@@ -414,7 +414,7 @@ export default function MembersPage() {
       alert("Aucun membre actif (statut « Membre Intégré ») à exporter.");
       return;
     }
-    setPrintTrigger({
+    setPrintData({
       title: "Liste des membres actifs",
       subtitle: `${officialActiveMembers.length} membres`,
       members: toPrintMembers(officialActiveMembers),
@@ -429,7 +429,7 @@ export default function MembersPage() {
       return;
     }
     const subset = members.filter((m) => list.memberIds.includes(m.id));
-    setPrintTrigger({
+    setPrintData({
       title: list.name,
       subtitle: `${subset.length} membre${subset.length > 1 ? "s" : ""}`,
       members: toPrintMembers(subset),
@@ -1556,16 +1556,12 @@ export default function MembersPage() {
         </Modal>
       </main>
 
-      {/* Composant d'impression PDF (invisible à l'écran, visible uniquement à l'impression) */}
-      {printTrigger && (
-        <MembersListPrint
-          trigger
-          title={printTrigger.title}
-          subtitle={printTrigger.subtitle}
-          members={printTrigger.members}
-          onAfterPrint={() => setPrintTrigger(null)}
-        />
-      )}
+      {/* Composant d'impression PDF : TOUJOURS rendu, jamais démonté.
+          Pattern identique à ShepherdReportPrint (rapport berger) :
+          si printData === null → return null en interne.
+          Ne PAS utiliser de rendu conditionnel `{printData && ...}`
+          car Safari prendrait son snapshot d'impression après le démontage. */}
+      <MembersListPrint data={printData} />
     </div>
   );
 }
