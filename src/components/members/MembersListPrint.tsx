@@ -23,13 +23,14 @@ export interface ListPrintProps {
 /**
  * Composant d'impression générique pour listes de membres (PDF via navigateur).
  *
- * Pattern identique à ShepherdReportPrint : toujours présent dans le DOM,
- * caché visuellement à l'écran via `position: absolute; left: -9999px`,
- * puis `window.print()` après que React ait peint.
+ * ⚠️ Suit le pattern imposé par `src/app/globals.css` :
+ *   - Le CSS global `@media print` masque TOUT le body (`visibility: hidden`)
+ *     SAUF les éléments dans `.print-only`
+ *   - Donc notre root DOIT avoir la classe `print-only`
+ *   - Les styles d'impression sont gérés globalement par `.print-only *`
+ *     + on peut surcharger via `#members-list-print` pour nos couleurs
  *
- * ⚠️ NE PAS utiliser `display: none` à l'écran : certains navigateurs
- * excluent le contenu display:none du snapshot d'impression, résultant
- * en PDF vide.
+ * Pattern identique à `ShepherdReportPrint` (rapport berger).
  */
 export function MembersListPrint({
   title,
@@ -40,7 +41,6 @@ export function MembersListPrint({
 }: ListPrintProps) {
   useEffect(() => {
     if (!trigger) return;
-    // 200ms : laisse React peindre 2 frames + styles print appliqués
     const t = setTimeout(() => {
       window.print();
       onAfterPrint?.();
@@ -55,88 +55,96 @@ export function MembersListPrint({
   });
 
   return (
-    <div className="members-list-print">
+    <div
+      id="members-list-print"
+      className="print-only bg-white text-slate-900 p-8"
+      style={{ fontFamily: "Arial, sans-serif" }}
+    >
       <style>{`
+        @media print {
+          #members-list-report {
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+          }
+          #members-list-report h1 {
+            page-break-after: avoid !important;
+            break-after: avoid !important;
+          }
+          #members-list-report table,
+          #members-list-report tr,
+          #members-list-report thead,
+          #members-list-report tbody {
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+          }
+          #members-list-report > div {
+            page-break-before: avoid !important;
+            break-before: avoid !important;
+          }
+        }
         @media screen {
-          .members-list-print {
-            position: absolute !important;
-            left: -9999px !important;
-            top: 0 !important;
-            width: 210mm;
+          #members-list-report {
+            /* Caché visuellement à l'écran (le print-only global n'est déjà
+               pas affiché en screen, mais on garantit aussi qu'il n'est
+               pas cliquable). */
             pointer-events: none;
           }
         }
-        @media print {
-          .members-list-print {
-            position: static !important;
-            left: 0 !important;
-            display: block !important;
-            padding: 0;
-            margin: 0;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            color: #0f172a;
-            background: #fff;
-          }
-          @page { size: A4 portrait; margin: 15mm; }
-          .mlp-header { border-bottom: 2px solid #1e1b4b; padding-bottom: 8mm; margin-bottom: 6mm; }
-          .mlp-title { font-size: 18pt; font-weight: 800; color: #1e1b4b; margin: 0; letter-spacing: -0.01em; }
-          .mlp-subtitle { font-size: 10pt; color: #64748b; margin-top: 2mm; font-weight: 600; }
-          .mlp-table { width: 100%; border-collapse: collapse; font-size: 11pt; }
-          .mlp-table thead th {
-            background: #1e1b4b; color: #fff;
-            padding: 3mm 3mm; text-align: left; font-weight: 700;
-            font-size: 10pt; text-transform: uppercase; letter-spacing: 0.05em;
-          }
-          .mlp-table thead th:first-child { width: 12mm; text-align: center; }
-          .mlp-table thead th:last-child { width: 35mm; }
-          .mlp-table tbody td {
-            padding: 2.8mm 3mm; border-bottom: 1px solid #e2e8f0;
-          }
-          .mlp-table tbody td:first-child { text-align: center; font-weight: 700; color: #64748b; }
-          .mlp-table tbody tr:nth-child(even) { background: #f8fafc; }
-          .mlp-table tbody td.empty {
-            text-align: center; padding: 10mm; color: #94a3b8; font-style: italic;
-          }
-          .mlp-footer { margin-top: 6mm; font-size: 9pt; color: #94a3b8; text-align: center; }
-        }
       `}</style>
 
-      <div className="mlp-header">
-        <h1 className="mlp-title">{title}</h1>
-        <div className="mlp-subtitle">
+      <div id="members-list-report">
+        <h1 className="text-center text-[22px] font-black uppercase tracking-wide mb-2 text-[#1e1b4b]">
+          {title}
+        </h1>
+        <p className="text-center text-[12px] text-slate-600 mb-6 font-semibold">
           {subtitle ? `${subtitle} — ` : ""}Généré le {dateStr}
-        </div>
-      </div>
+        </p>
 
-      <table className="mlp-table">
-        <thead>
-          <tr>
-            <th>#</th>
-            <th>Nom &amp; Prénom</th>
-            <th>Téléphone</th>
-          </tr>
-        </thead>
-        <tbody>
-          {members.length === 0 ? (
+        <table className="w-full border-collapse">
+          <thead>
             <tr>
-              <td colSpan={3} className="empty">
-                Aucun membre dans cette liste
-              </td>
+              <th className="border-2 border-slate-900 bg-[#1e1b4b] text-white px-3 py-2 text-[12px] font-bold uppercase tracking-wide w-[8%] text-center">
+                #
+              </th>
+              <th className="border-2 border-slate-900 bg-[#1e1b4b] text-white px-3 py-2 text-[12px] font-bold uppercase tracking-wide">
+                Nom &amp; Prénom
+              </th>
+              <th className="border-2 border-slate-900 bg-[#1e1b4b] text-white px-3 py-2 text-[12px] font-bold uppercase tracking-wide w-[28%]">
+                Téléphone
+              </th>
             </tr>
-          ) : (
-            members.map((m, i) => (
-              <tr key={i}>
-                <td>{i + 1}</td>
-                <td>{m.fullName || "—"}</td>
-                <td>{m.phone || "—"}</td>
+          </thead>
+          <tbody>
+            {members.length === 0 ? (
+              <tr>
+                <td
+                  colSpan={3}
+                  className="border-2 border-slate-900 px-3 py-8 text-center text-slate-500 italic"
+                >
+                  Aucun membre dans cette liste
+                </td>
               </tr>
-            ))
-          )}
-        </tbody>
-      </table>
+            ) : (
+              members.map((m, i) => (
+                <tr key={i}>
+                  <td className="border-2 border-slate-900 px-3 py-2.5 text-center font-bold text-slate-700">
+                    {i + 1}
+                  </td>
+                  <td className="border-2 border-slate-900 px-3 py-2.5 font-bold text-slate-900">
+                    {m.fullName || "—"}
+                  </td>
+                  <td className="border-2 border-slate-900 px-3 py-2.5 font-bold text-slate-900">
+                    {m.phone || "—"}
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
 
-      <div className="mlp-footer">
-        Ekklesia — {members.length} membre{members.length > 1 ? "s" : ""}
+        <p className="text-center text-[10px] text-slate-500 mt-6">
+          Ekklesia — {members.length} membre{members.length > 1 ? "s" : ""}
+        </p>
       </div>
     </div>
   );
