@@ -22,10 +22,14 @@ export interface ListPrintProps {
 
 /**
  * Composant d'impression générique pour listes de membres (PDF via navigateur).
- * Invisible à l'écran, visible uniquement à l'impression.
  *
- * Pattern identique à ShepherdReportPrint : useEffect + setTimeout pour laisser
- * React peindre avant d'appeler window.print().
+ * Pattern identique à ShepherdReportPrint : toujours présent dans le DOM,
+ * caché visuellement à l'écran via `position: absolute; left: -9999px`,
+ * puis `window.print()` après que React ait peint.
+ *
+ * ⚠️ NE PAS utiliser `display: none` à l'écran : certains navigateurs
+ * excluent le contenu display:none du snapshot d'impression, résultant
+ * en PDF vide.
  */
 export function MembersListPrint({
   title,
@@ -36,17 +40,13 @@ export function MembersListPrint({
 }: ListPrintProps) {
   useEffect(() => {
     if (!trigger) return;
+    // 200ms : laisse React peindre 2 frames + styles print appliqués
     const t = setTimeout(() => {
       window.print();
       onAfterPrint?.();
-    }, 100);
+    }, 200);
     return () => clearTimeout(t);
   }, [trigger, onAfterPrint]);
-
-  if (!trigger && typeof window !== "undefined" && !window.matchMedia("print").matches) {
-    // Hors impression : ne rien rendre du tout (gain perf + pas de pollution DOM)
-    return null;
-  }
 
   const dateStr = new Date().toLocaleDateString("fr-FR", {
     day: "numeric",
@@ -58,15 +58,24 @@ export function MembersListPrint({
     <div className="members-list-print">
       <style>{`
         @media screen {
-          .members-list-print { display: none !important; }
+          .members-list-print {
+            position: absolute !important;
+            left: -9999px !important;
+            top: 0 !important;
+            width: 210mm;
+            pointer-events: none;
+          }
         }
         @media print {
           .members-list-print {
+            position: static !important;
+            left: 0 !important;
             display: block !important;
             padding: 0;
             margin: 0;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             color: #0f172a;
+            background: #fff;
           }
           @page { size: A4 portrait; margin: 15mm; }
           .mlp-header { border-bottom: 2px solid #1e1b4b; padding-bottom: 8mm; margin-bottom: 6mm; }
