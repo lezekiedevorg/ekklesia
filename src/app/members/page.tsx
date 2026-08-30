@@ -398,9 +398,10 @@ export default function MembersPage() {
   const newcomersList = members.filter((m) => m.status === "new");
   const archivedMembersList = members.filter((m) => m.status === "archived");
 
-  // Membres actifs = statut officiel "member" (toute la Bergerie, indépendamment
-  // de ce que "Membres Actifs" de l'onglet affiche — qui exclut new + archived).
-  const officialActiveMembers = members.filter((m) => m.status === "member");
+  // "Membres actifs" = ta liste officielle, telle qu'affichée dans l'onglet
+  // "Membres Actifs" de /members (statut ≠ archived et ≠ new). On inclut
+  // donc 'in_integration', 'member' et 'absent_to_relaunch'.
+  const activeRoster = activeMembers;
 
   // Handlers PDF
   const toPrintMembers = (list: Member[]): PrintMember[] =>
@@ -410,14 +411,14 @@ export default function MembersPage() {
     }));
 
   const handleExportActiveMembers = () => {
-    if (officialActiveMembers.length === 0) {
-      alert("Aucun membre actif (statut « Membre Intégré ») à exporter.");
+    if (activeRoster.length === 0) {
+      alert("Aucun membre dans ta liste officielle à exporter.");
       return;
     }
     setPrintData({
       title: "Liste des membres actifs",
-      subtitle: `${officialActiveMembers.length} membres`,
-      members: toPrintMembers(officialActiveMembers),
+      subtitle: `${activeRoster.length} membres`,
+      members: toPrintMembers(activeRoster),
     });
   };
 
@@ -576,7 +577,7 @@ export default function MembersPage() {
           <div className="relative z-10 flex items-center gap-2 flex-wrap shrink-0">
             <button
               onClick={handleExportActiveMembers}
-              title={`Exporter les ${officialActiveMembers.length} membres actifs en PDF`}
+              title={`Exporter les ${activeRoster.length} membres actifs en PDF`}
               className="px-4 sm:px-5 py-3.5 rounded-2xl font-headline-md font-extrabold text-xs text-[#1e1b4b] bg-white hover:bg-indigo-50 border-2 border-[#1e1b4b]/20 hover:border-[#1e1b4b] shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer"
             >
               <span className="material-symbols-outlined text-[18px]">picture_as_pdf</span>
